@@ -710,17 +710,44 @@
 // PENTING: Ganti 2 nilai di bawah dengan kredensial Supabase Anda
 // Cara dapat: Supabase Dashboard → Project Settings → API
 // ═════════════════════════════════════════════════════════════════
-const SUPABASE_URL     = 'https://jpopwsbezrznluwalgbe.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Impwb3B3c2JlenJ6bmx1d2FsZ2JlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY2MjEwNjEsImV4cCI6MjA5MjE5NzA2MX0.cuqEE_jhjwDBmjBF7zYL5FkvwTxs8fjCfMasq2m7uY8';
+const SUPABASE_URL     = 'https://YOUR_PROJECT.supabase.co';
+const SUPABASE_ANON_KEY = 'YOUR_ANON_KEY_HERE';
 // ═════════════════════════════════════════════════════════════════
 
-// Bobot penilaian (sesuai gambar)
+// Bobot aspek per surah (di dalam nilai kualitas)
 const BOBOT = {
   kelancaran: 0.30,
   tajwid: 0.30,
   kekuatan_hafalan: 0.25,
   adab_tartil: 0.15
 };
+
+// Bobot Kualitas vs Kuantitas di nilai akhir
+const BOBOT_KUALITAS  = 0.70;
+const BOBOT_KUANTITAS = 0.30;
+
+// Target minimal juz per kelas (nilai kuantitas = (juz/target)×100, max 100)
+// Kelas dideteksi dari karakter angka pertama: "7A" → 7, "Kelas 8" → 8, dst.
+const TARGET_JUZ = { 7: 2, 8: 4, 9: 6 };
+
+function getTargetJuz(kelas) {
+  if (!kelas) return 2; // default minimal
+  const m = String(kelas).match(/[789]/);
+  const tingkat = m ? parseInt(m[0]) : 7;
+  return TARGET_JUZ[tingkat] || 2;
+}
+
+function hitungNilaiKuantitas(juz, kelas) {
+  const target = getTargetJuz(kelas);
+  if (!target) return 0;
+  const n = (Number(juz) || 0) / target * 100;
+  return Math.min(100, Math.max(0, n));
+}
+
+function hitungNilaiAkhir(kualitas, kuantitas) {
+  return (Number(kualitas) || 0) * BOBOT_KUALITAS +
+         (Number(kuantitas) || 0) * BOBOT_KUANTITAS;
+}
 
 // Validasi config
 const CONFIG_OK = SUPABASE_URL && SUPABASE_URL.startsWith('https://') &&
@@ -926,7 +953,7 @@ function renderBottomNav() {
   const isAdmin = STATE.user.role === 'admin';
   const items = [
     { id: 'home', icon: 'dashboard', label: 'Beranda', show: true },
-    { id: 'penilaian', icon: 'edit_note', label: 'Nilai', show: true },
+    { id: 'penilaian', icon: 'edit_note', label: 'Nilai', show: !isAdmin },
     { id: 'rekap', icon: 'analytics', label: 'Rekap', show: true },
     { id: 'admin', icon: 'settings', label: 'Admin', show: isAdmin },
   ];
@@ -995,6 +1022,10 @@ function handleLogout() {
 // ROUTING
 // ═════════════════════════════════════════════════════════════════
 function showPage(page) {
+  // Admin tidak boleh akses halaman input penilaian — redirect ke home
+  if (page === 'penilaian' && STATE.user && STATE.user.role === 'admin') {
+    page = 'home';
+  }
   STATE.page = page;
   renderBottomNav();
 
@@ -1123,16 +1154,18 @@ async function renderHome() {
         <span class="material-symbols-outlined" style="font-size:15px">rocket_launch</span> Aksi Cepat
       </div>
       <div style="display:flex;flex-direction:column;gap:10px">
-        <button class="btn btn-primary btn-full" onclick="showPage('penilaian')">
-          <span class="material-symbols-outlined" style="font-size:17px">edit_note</span>
-          Input Penilaian
-        </button>
-        <button class="btn btn-accent btn-full" onclick="showPage('rekap')">
+        ${!isAdmin ? `
+          <button class="btn btn-primary btn-full" onclick="showPage('penilaian')">
+            <span class="material-symbols-outlined" style="font-size:17px">edit_note</span>
+            Input Penilaian
+          </button>
+        ` : ''}
+        <button class="${isAdmin ? 'btn btn-primary' : 'btn btn-accent'} btn-full" onclick="showPage('rekap')">
           <span class="material-symbols-outlined" style="font-size:17px">analytics</span>
           Lihat Rekap Nilai
         </button>
         ${isAdmin ? `
-          <button class="btn btn-outline btn-full" onclick="showPage('admin')">
+          <button class="btn btn-accent btn-full" onclick="showPage('admin')">
             <span class="material-symbols-outlined" style="font-size:17px">settings</span>
             Panel Admin
           </button>
@@ -1141,12 +1174,27 @@ async function renderHome() {
     </div>
 
     <div class="bobot-info">
-      <strong>📏 Variabel Penilaian (per Surah)</strong>
-      <div class="bobot-row">
+      <strong>📏 Sistem Penilaian</strong>
+      <div style="display:flex;gap:8px;margin-bottom:8px">
+        <span class="bobot-chip" style="background:#dbeafe;color:#1e40af;font-weight:700">Kualitas 70%</span>
+        <span class="bobot-chip" style="background:#fef3c7;color:#854d0e;font-weight:700">Kuantitas 30%</span>
+      </div>
+      <div style="font-size:11px;color:var(--primary-dark);margin-bottom:6px;font-weight:600">
+        ▸ Kualitas (per surah):
+      </div>
+      <div class="bobot-row" style="margin-bottom:8px">
         <span class="bobot-chip">Kelancaran 30%</span>
         <span class="bobot-chip">Tajwid 30%</span>
-        <span class="bobot-chip">Kekuatan Hafalan 25%</span>
-        <span class="bobot-chip">Adab & Tartil 15%</span>
+        <span class="bobot-chip">Kekuatan 25%</span>
+        <span class="bobot-chip">Adab 15%</span>
+      </div>
+      <div style="font-size:11px;color:var(--primary-dark);margin-bottom:6px;font-weight:600">
+        ▸ Kuantitas (target juz):
+      </div>
+      <div class="bobot-row">
+        <span class="bobot-chip">Kelas 7 → 2 Juz</span>
+        <span class="bobot-chip">Kelas 8 → 4 Juz</span>
+        <span class="bobot-chip">Kelas 9 → 6 Juz</span>
       </div>
     </div>
   `;
@@ -1326,6 +1374,7 @@ async function openFormPenilaian(siswaId, pengujiId) {
       penilaianId: existing?.id || null,
       tanggal: existing?.tanggal_ujian || new Date().toISOString().slice(0,10),
       catatan: existing?.catatan || '',
+      jumlah_juz: existing?.jumlah_juz ?? '',
       baris: existing?.nilai_detail?.length
         ? existing.nilai_detail
             .sort((a,b) => (a.urutan||0) - (b.urutan||0))
@@ -1397,12 +1446,13 @@ function renderFormPenilaian() {
 
     <!-- Bobot Info -->
     <div class="bobot-info">
-      <strong>📏 Bobot Penilaian</strong>
-      <div class="bobot-row">
-        <span class="bobot-chip">Kelancaran 30%</span>
-        <span class="bobot-chip">Tajwid 30%</span>
-        <span class="bobot-chip">Kekuatan 25%</span>
-        <span class="bobot-chip">Adab 15%</span>
+      <strong>📏 Sistem Penilaian</strong>
+      <div style="display:flex;gap:8px;margin-bottom:6px">
+        <span class="bobot-chip" style="background:#dbeafe;color:#1e40af;font-weight:700">Kualitas 70%</span>
+        <span class="bobot-chip" style="background:#fef3c7;color:#854d0e;font-weight:700">Kuantitas 30%</span>
+      </div>
+      <div style="font-size:11px;color:var(--primary-dark);opacity:.85">
+        Target Juz Kelas ${escapeHtml(s.kelas || '-')}: <strong>${getTargetJuz(s.kelas)} juz</strong>
       </div>
     </div>
 
@@ -1422,11 +1472,29 @@ function renderFormPenilaian() {
       </div>
     </div>
 
-    <!-- Tabel nilai per surah -->
-    <div class="card">
-      <div class="card-title">
+    <!-- KUANTITAS (Jumlah Juz) -->
+    <div class="card" style="border-left:4px solid #d97706">
+      <div class="card-title" style="color:#854d0e">
+        <span class="material-symbols-outlined" style="font-size:15px">menu_book</span>
+        KUANTITAS · Jumlah Juz <span style="font-size:10px;background:#fef3c7;color:#854d0e;padding:2px 8px;border-radius:999px;margin-left:4px">Bobot 30%</span>
+      </div>
+      <p class="text-small text-muted" style="margin-bottom:10px">
+        Jumlah juz yang berhasil dihafal siswa. Target kelas ${escapeHtml(s.kelas || '-')}: <strong>${getTargetJuz(s.kelas)} juz</strong>
+      </p>
+      <div class="form-group">
+        <label>Jumlah Juz yang Dihafal <span class="req">*</span> <span class="hint">(boleh pecahan, misal 2.5)</span></label>
+        <input type="number" id="fJuz" min="0" max="30" step="0.25" value="${fs.jumlah_juz}"
+               placeholder="Contoh: 2 atau 2.5"
+               oninput="updateNilaiKuantitas(this.value)">
+      </div>
+      <div id="kuantitasBox"></div>
+    </div>
+
+    <!-- KUALITAS (Tabel nilai per surah) -->
+    <div class="card" style="border-left:4px solid #2563eb">
+      <div class="card-title" style="color:var(--primary-dark)">
         <span class="material-symbols-outlined" style="font-size:15px">library_books</span>
-        Nilai Hafalan per Surah
+        KUALITAS · Nilai per Surah <span style="font-size:10px;background:#dbeafe;color:#1e40af;padding:2px 8px;border-radius:999px;margin-left:4px">Bobot 70%</span>
       </div>
       <p class="text-small text-muted" style="margin-bottom:10px">
         Nilai 1–100. Tambah baris untuk tiap surah yang diujikan.
@@ -1455,6 +1523,9 @@ function renderFormPenilaian() {
       <div id="rataRataBox" style="margin-top:14px"></div>
     </div>
 
+    <!-- Ringkasan Nilai Akhir -->
+    <div id="nilaiAkhirBox"></div>
+
     <!-- Action buttons -->
     <div style="display:flex;flex-direction:column;gap:8px;margin-top:14px">
       <button class="btn btn-primary btn-full" onclick="simpanPenilaian()">
@@ -1474,6 +1545,10 @@ function renderFormPenilaian() {
     </div>
   `;
   renderBarisNilai();
+  // Initial render untuk box kuantitas & nilai akhir (kalau sudah ada data juz dari edit)
+  if (FORM_STATE.jumlah_juz !== '' && FORM_STATE.jumlah_juz !== null) {
+    updateNilaiKuantitas(FORM_STATE.jumlah_juz);
+  }
 }
 
 function renderBarisNilai() {
@@ -1541,6 +1616,7 @@ function updateRataRata() {
   const box = document.getElementById('rataRataBox');
   if (!baris.length) {
     box.innerHTML = '';
+    updateNilaiAkhir();
     return;
   }
   const totals = baris.map(b => hitungTotal(b));
@@ -1548,15 +1624,107 @@ function updateRataRata() {
   const max = Math.max(...totals);
   const min = Math.min(...totals);
   box.innerHTML = `
-    <div class="alert alert-success">
-      <span class="material-symbols-outlined" style="font-size:17px">emoji_events</span>
+    <div class="alert alert-info" style="background:#dbeafe;color:#1e40af;border-color:#93c5fd">
+      <span class="material-symbols-outlined" style="font-size:17px">library_books</span>
       <div style="flex:1">
         <div style="font-weight:800;font-size:14px;margin-bottom:4px">
-          Nilai Akhir: ${rata.toFixed(2)}
-          <span class="badge badge-green" style="margin-left:6px">${predikat(rata)}</span>
+          Nilai Kualitas: ${rata.toFixed(2)}
+          <span class="badge" style="margin-left:6px;background:#1e40af;color:white">${predikat(rata)}</span>
         </div>
-        <div class="text-small" style="color:var(--text-muted)">
+        <div class="text-small">
           ${baris.length} surah · Tertinggi ${max.toFixed(2)} · Terendah ${min.toFixed(2)}
+        </div>
+      </div>
+    </div>
+  `;
+  updateNilaiAkhir();
+}
+
+function updateNilaiKuantitas(val) {
+  FORM_STATE.jumlah_juz = val === '' ? '' : Number(val);
+  const box = document.getElementById('kuantitasBox');
+  if (val === '' || isNaN(Number(val))) {
+    box.innerHTML = '';
+    updateNilaiAkhir();
+    return;
+  }
+  const juz = Number(val);
+  const target = getTargetJuz(FORM_STATE.siswa.kelas);
+  const nilai = hitungNilaiKuantitas(juz, FORM_STATE.siswa.kelas);
+  const tercapai = juz >= target;
+  box.innerHTML = `
+    <div class="alert alert-warning" style="background:#fef3c7;color:#854d0e;border-color:#fde68a">
+      <span class="material-symbols-outlined" style="font-size:17px">${tercapai ? 'verified' : 'info'}</span>
+      <div style="flex:1">
+        <div style="font-weight:800;font-size:14px;margin-bottom:4px">
+          Nilai Kuantitas: ${nilai.toFixed(2)}
+          ${tercapai
+            ? '<span class="badge" style="margin-left:6px;background:#059669;color:white">✓ Target Tercapai</span>'
+            : '<span class="badge" style="margin-left:6px;background:#dc2626;color:white">Belum Tercapai</span>'}
+        </div>
+        <div class="text-small">
+          ${juz} dari ${target} juz · ${(juz/target*100).toFixed(1)}% dari target kelas
+        </div>
+      </div>
+    </div>
+  `;
+  updateNilaiAkhir();
+}
+
+function updateNilaiAkhir() {
+  const box = document.getElementById('nilaiAkhirBox');
+  if (!box) return;
+
+  const baris = FORM_STATE.baris.filter(b => b.surah_nama && b.kelancaran !== '' && b.tajwid !== '' && b.kekuatan_hafalan !== '' && b.adab_tartil !== '');
+  const juzVal = FORM_STATE.jumlah_juz;
+
+  const adaKualitas = baris.length > 0;
+  const adaKuantitas = juzVal !== '' && !isNaN(Number(juzVal));
+
+  if (!adaKualitas && !adaKuantitas) {
+    box.innerHTML = '';
+    return;
+  }
+
+  const kualitas = adaKualitas
+    ? baris.map(b => hitungTotal(b)).reduce((a,b)=>a+b,0) / baris.length
+    : 0;
+  const kuantitas = adaKuantitas
+    ? hitungNilaiKuantitas(Number(juzVal), FORM_STATE.siswa.kelas)
+    : 0;
+  const akhir = hitungNilaiAkhir(kualitas, kuantitas);
+
+  const lengkap = adaKualitas && adaKuantitas;
+
+  box.innerHTML = `
+    <div class="card" style="background:linear-gradient(135deg,#dbeafe,#e0f2fe);border:2px solid var(--primary);margin-top:14px">
+      <div class="card-title" style="color:var(--primary-dark);border-bottom-color:var(--primary-light)">
+        <span class="material-symbols-outlined" style="font-size:15px">emoji_events</span>
+        Nilai Akhir Siswa
+      </div>
+      ${!lengkap ? `
+        <div class="alert alert-warning" style="margin-bottom:10px">
+          <span class="material-symbols-outlined" style="font-size:15px">warning</span>
+          <span>Lengkapi kedua komponen: ${!adaKualitas ? 'nilai surah' : ''} ${!adaKualitas && !adaKuantitas ? 'dan' : ''} ${!adaKuantitas ? 'jumlah juz' : ''}</span>
+        </div>
+      ` : ''}
+      <div class="grid-2" style="gap:10px;margin-bottom:12px">
+        <div style="background:white;padding:10px;border-radius:12px;border:1px solid #bfdbfe;text-align:center">
+          <div style="font-size:10px;color:#1e40af;font-weight:700;letter-spacing:.5px">KUALITAS × 70%</div>
+          <div style="font-size:20px;font-weight:800;color:#1e40af;font-family:'Noto Serif',serif">${kualitas.toFixed(2)}</div>
+          <div style="font-size:10px;color:var(--text-muted)">= ${(kualitas*0.7).toFixed(2)}</div>
+        </div>
+        <div style="background:white;padding:10px;border-radius:12px;border:1px solid #fde68a;text-align:center">
+          <div style="font-size:10px;color:#854d0e;font-weight:700;letter-spacing:.5px">KUANTITAS × 30%</div>
+          <div style="font-size:20px;font-weight:800;color:#854d0e;font-family:'Noto Serif',serif">${kuantitas.toFixed(2)}</div>
+          <div style="font-size:10px;color:var(--text-muted)">= ${(kuantitas*0.3).toFixed(2)}</div>
+        </div>
+      </div>
+      <div style="text-align:center;padding:14px;background:white;border-radius:12px;border:2px solid var(--primary)">
+        <div style="font-size:10px;color:var(--primary-dark);font-weight:700;letter-spacing:.8px;margin-bottom:4px">NILAI AKHIR</div>
+        <div style="font-size:40px;font-weight:800;color:${warnaNilai(akhir)};font-family:'Noto Serif',serif;line-height:1">${akhir.toFixed(2)}</div>
+        <div style="margin-top:6px">
+          <span class="badge" style="background:${warnaNilai(akhir)};color:white;font-size:12px;padding:4px 12px">${predikat(akhir)}</span>
         </div>
       </div>
     </div>
@@ -1564,7 +1732,7 @@ function updateRataRata() {
 }
 
 async function simpanPenilaian() {
-  // Validasi
+  // Validasi kualitas (baris surah)
   const validBaris = FORM_STATE.baris.filter(b => b.surah_nama && b.surah_nama.trim());
   if (!validBaris.length) {
     showToast('⚠️ Isi minimal 1 surah dengan nama');
@@ -1580,24 +1748,45 @@ async function simpanPenilaian() {
     }
   }
 
+  // Validasi kuantitas (jumlah juz)
+  const juzVal = document.getElementById('fJuz').value;
+  if (juzVal === '' || isNaN(Number(juzVal))) {
+    showToast('⚠️ Isi jumlah juz yang dihafal');
+    return;
+  }
+  const juz = Number(juzVal);
+  if (juz < 0 || juz > 30) {
+    showToast('⚠️ Jumlah juz harus 0–30');
+    return;
+  }
+
   const tanggal = document.getElementById('fTanggal').value;
   const catatan = document.getElementById('fCatatan').value.trim();
+
+  // Hitung nilai
   const totals = validBaris.map(b => hitungTotal(b));
-  const rata = totals.reduce((a,b)=>a+b,0) / totals.length;
+  const kualitas = totals.reduce((a,b)=>a+b,0) / totals.length;
+  const kuantitas = hitungNilaiKuantitas(juz, FORM_STATE.siswa.kelas);
+  const akhir = hitungNilaiAkhir(kualitas, kuantitas);
 
   showLoading('Menyimpan...');
   try {
     let penilaianId = FORM_STATE.penilaianId;
 
+    const payload = {
+      tanggal_ujian: tanggal,
+      catatan: catatan,
+      nilai_kualitas: kualitas,
+      jumlah_juz: juz,
+      nilai_kuantitas: kuantitas,
+      nilai_akhir: akhir,
+      updated_at: new Date().toISOString()
+    };
+
     if (penilaianId) {
       // Update header
       const { error: eUpd } = await sb.from('penilaian')
-        .update({
-          tanggal_ujian: tanggal,
-          catatan: catatan,
-          nilai_akhir: rata,
-          updated_at: new Date().toISOString()
-        })
+        .update(payload)
         .eq('id', penilaianId);
       if (eUpd) throw eUpd;
 
@@ -1611,9 +1800,7 @@ async function simpanPenilaian() {
         .insert({
           siswa_id: FORM_STATE.siswa.id,
           penguji_id: FORM_STATE.penguji.id,
-          tanggal_ujian: tanggal,
-          catatan: catatan,
-          nilai_akhir: rata
+          ...payload
         })
         .select().single();
       if (eIns) throw eIns;
@@ -1641,7 +1828,7 @@ async function simpanPenilaian() {
     if (eAs) throw eAs;
 
     hideLoading();
-    showToast('✅ Penilaian tersimpan. Nilai akhir: ' + rata.toFixed(2));
+    showToast(`✅ Tersimpan · Akhir: ${akhir.toFixed(2)} (K:${kualitas.toFixed(1)} + Q:${kuantitas.toFixed(1)})`);
     showPage('penilaian');
   } catch (e) {
     hideLoading();
@@ -1769,9 +1956,8 @@ async function renderRekap() {
                 <div class="list-name">${escapeHtml(s.nama || '-')}</div>
                 <div class="list-meta">
                   <span class="badge badge-blue">${escapeHtml(s.kelas || '-')}</span>
-                  <span>${escapeHtml(s.semester || '')}</span>
                   <span class="badge badge-purple">${escapeHtml(pg.nama || '-')}</span>
-                  <span>${p.nilai_detail?.length || 0} surah</span>
+                  <span>${p.nilai_detail?.length || 0} surah · ${Number(p.jumlah_juz || 0)} juz</span>
                   <span class="badge" style="background:${warnaNilai(na)}20;color:${warnaNilai(na)}">${predikat(na)}</span>
                 </div>
               </div>
@@ -1846,13 +2032,31 @@ async function detailRekap(penilaianId) {
         </table>
       </div>
 
-      <div class="alert alert-success mt-3" style="margin-top:12px">
+      <div class="alert alert-info mt-3" style="margin-top:12px;background:#dbeafe;color:#1e40af;border-color:#93c5fd">
         <div style="flex:1">
-          <div style="font-weight:800;font-size:16px">Nilai Akhir: ${Number(data.nilai_akhir).toFixed(2)}
-            <span class="badge badge-green" style="margin-left:4px">${predikat(Number(data.nilai_akhir))}</span>
+          <div style="font-weight:800;font-size:14px;margin-bottom:4px">
+            Kualitas (rata-rata surah): ${Number(data.nilai_kualitas || 0).toFixed(2)}
+            <span class="badge" style="background:#1e40af;color:white;margin-left:4px">×70% = ${(Number(data.nilai_kualitas || 0)*0.7).toFixed(2)}</span>
           </div>
-          ${data.catatan ? `<div class="text-small mt-2" style="margin-top:6px"><em>"${escapeHtml(data.catatan)}"</em></div>` : ''}
         </div>
+      </div>
+      <div class="alert alert-warning" style="background:#fef3c7;color:#854d0e;border-color:#fde68a">
+        <div style="flex:1">
+          <div style="font-weight:800;font-size:14px;margin-bottom:4px">
+            Kuantitas: ${Number(data.nilai_kuantitas || 0).toFixed(2)}
+            <span class="badge" style="background:#854d0e;color:white;margin-left:4px">×30% = ${(Number(data.nilai_kuantitas || 0)*0.3).toFixed(2)}</span>
+          </div>
+          <div class="text-small">
+            ${Number(data.jumlah_juz || 0)} dari ${getTargetJuz(s.kelas)} juz target (kelas ${escapeHtml(s.kelas || '-')})
+          </div>
+        </div>
+      </div>
+
+      <div style="background:linear-gradient(135deg,#dbeafe,#e0f2fe);padding:16px;border-radius:16px;border:2px solid var(--primary);text-align:center;margin-top:12px">
+        <div style="font-size:10px;color:var(--primary-dark);font-weight:700;letter-spacing:.8px">NILAI AKHIR</div>
+        <div style="font-size:36px;font-weight:800;color:${warnaNilai(Number(data.nilai_akhir))};font-family:'Noto Serif',serif;line-height:1.1">${Number(data.nilai_akhir).toFixed(2)}</div>
+        <span class="badge" style="background:${warnaNilai(Number(data.nilai_akhir))};color:white;font-size:12px;padding:4px 12px;margin-top:4px">${predikat(Number(data.nilai_akhir))}</span>
+        ${data.catatan ? `<div class="text-small mt-2" style="margin-top:8px;color:var(--text-muted)"><em>"${escapeHtml(data.catatan)}"</em></div>` : ''}
       </div>
 
       <div style="display:flex;gap:8px;margin-top:14px">
@@ -1877,10 +2081,11 @@ function exportRekapExcel() {
 
   // Sheet 1: Rekap (satu baris per siswa)
   const sheet1 = [
-    ['NO','NISN','NAMA SISWA','KELAS','SEMESTER','PENGUJI','TANGGAL','JUMLAH SURAH','NILAI AKHIR','PREDIKAT','CATATAN']
+    ['NO','NISN','NAMA SISWA','KELAS','SEMESTER','PENGUJI','TANGGAL','JUMLAH SURAH','JUMLAH JUZ','TARGET JUZ','NILAI KUALITAS (70%)','NILAI KUANTITAS (30%)','NILAI AKHIR','PREDIKAT','CATATAN']
   ];
   data.forEach((p, i) => {
     const s = p.siswa || {};
+    const targetJuz = getTargetJuz(s.kelas);
     sheet1.push([
       i+1,
       s.nisn || '',
@@ -1890,6 +2095,10 @@ function exportRekapExcel() {
       p.penguji?.nama || '',
       p.tanggal_ujian || '',
       (p.nilai_detail||[]).length,
+      Number(p.jumlah_juz || 0),
+      targetJuz,
+      Number(p.nilai_kualitas || 0).toFixed(2),
+      Number(p.nilai_kuantitas || 0).toFixed(2),
       Number(p.nilai_akhir).toFixed(2),
       predikat(Number(p.nilai_akhir)),
       p.catatan || ''
@@ -1922,7 +2131,7 @@ function exportRekapExcel() {
   const wb = XLSX.utils.book_new();
   const ws1 = XLSX.utils.aoa_to_sheet(sheet1);
   const ws2 = XLSX.utils.aoa_to_sheet(sheet2);
-  ws1['!cols'] = [{wch:4},{wch:14},{wch:24},{wch:10},{wch:10},{wch:18},{wch:12},{wch:8},{wch:10},{wch:14},{wch:28}];
+  ws1['!cols'] = [{wch:4},{wch:14},{wch:24},{wch:10},{wch:10},{wch:18},{wch:12},{wch:8},{wch:8},{wch:8},{wch:14},{wch:14},{wch:12},{wch:14},{wch:28}];
   ws2['!cols'] = [{wch:14},{wch:24},{wch:10},{wch:18},{wch:18},{wch:14},{wch:10},{wch:16},{wch:14},{wch:8}];
   XLSX.utils.book_append_sheet(wb, ws1, 'Rekap Nilai');
   XLSX.utils.book_append_sheet(wb, ws2, 'Detail Surah');
