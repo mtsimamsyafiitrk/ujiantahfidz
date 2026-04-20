@@ -113,22 +113,52 @@ Ganti dengan nilai yang kamu catat di langkah 3. Simpan file.
 
 ## 📏 Sistem Penilaian
 
-| Aspek | Bobot | Contoh (nilai 90, 80, 85, 95) |
-|-------|-------|-------------------------------|
-| Kelancaran | 30% | 90 × 0.30 = 27.00 |
-| Tajwid | 30% | 80 × 0.30 = 24.00 |
-| Kekuatan Hafalan | 25% | 85 × 0.25 = 21.25 |
-| Adab & Tartil | 15% | 95 × 0.15 = 14.25 |
-| **TOTAL** | **100%** | **86.50** |
+Nilai akhir siswa terdiri dari **2 komponen**:
 
-**Predikat:**
+### 🔵 KUALITAS (Bobot 70%)
+
+Rata-rata nilai dari semua surah yang diujikan. Per surah dihitung dari 4 aspek:
+
+| Aspek | Bobot |
+|-------|-------|
+| Kelancaran | 30% |
+| Tajwid | 30% |
+| Kekuatan Hafalan | 25% |
+| Adab & Tartil | 15% |
+
+### 🟡 KUANTITAS (Bobot 30%)
+
+Dihitung dari jumlah juz yang dihafal siswa, dibandingkan dengan target minimal per kelas:
+
+| Kelas | Target Minimal |
+|-------|---------------|
+| Kelas 7 | 2 juz |
+| Kelas 8 | 4 juz |
+| Kelas 9 | 6 juz |
+
+**Rumus**: `Kuantitas = (Jumlah Juz ÷ Target Juz) × 100` (maksimal 100)
+
+- Kelas 7 hafal 2 juz → 100 ✓
+- Kelas 8 hafal 2 juz → 50
+- Kelas 9 hafal 8 juz → 100 (dibatasi maksimal)
+
+### 🏆 NILAI AKHIR
+
+```
+Nilai Akhir = (Kualitas × 70%) + (Kuantitas × 30%)
+```
+
+**Contoh**: Siswa kelas 8, nilai Kualitas 85, hafal 4 juz
+- Kuantitas = (4/4) × 100 = 100
+- Nilai Akhir = (85 × 0.70) + (100 × 0.30) = 59.5 + 30 = **89.5** (Jayyid Jiddan)
+
+### Predikat
+
 - ≥ 90: Mumtaz (Cemerlang)
 - ≥ 80: Jayyid Jiddan (Baik Sekali)
 - ≥ 70: Jayyid (Baik)
 - ≥ 60: Maqbul (Cukup)
 - < 60: Rasib (Kurang)
-
-Nilai akhir siswa = rata-rata total dari semua surah yang diujikan.
 
 ---
 
@@ -138,10 +168,15 @@ Nilai akhir siswa = rata-rata total dari semua surah yang diujikan.
 tahfidz-app/
 ├── index.html              ← aplikasi (frontend + JS)
 ├── supabase-schema.sql     ← database schema (jalankan sekali di Supabase)
+├── migrasi-kuantitas.sql   ← untuk upgrade DB yang sudah ada (jalankan sekali)
 └── README.md               ← panduan ini
 ```
 
 Hanya **`index.html`** yang perlu di-upload ke GitHub Pages.
+
+### ⚠️ Kalau Database Sudah Pernah Di-setup Sebelumnya
+
+Jika Anda sudah pernah jalankan `supabase-schema.sql` versi lama (yang belum ada sistem kuantitas), Anda **tidak perlu setup ulang**. Cukup jalankan file **`migrasi-kuantitas.sql`** sekali di SQL Editor Supabase. File ini akan menambahkan kolom baru (`nilai_kualitas`, `jumlah_juz`, `nilai_kuantitas`) tanpa menghapus data yang sudah ada.
 
 ---
 
