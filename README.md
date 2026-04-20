@@ -44,14 +44,43 @@ Aplikasi web single-file untuk penilaian ujian Tahfidzul Qur'an siswa MTs Al Ima
 
 ### 4️⃣ Konfigurasi Aplikasi
 
-Buka file `index.html` pakai text editor. Cari baris berikut (sekitar baris 660-an):
+**Ada 2 cara mengatur kredensial Supabase:**
+
+#### Cara A: Input di Browser (Direkomendasikan — tanpa edit file)
+
+1. Upload `index.html` apa adanya (tidak perlu edit)
+2. Buka aplikasi di browser
+3. Akan muncul form **"Setup Kredensial Supabase"**
+4. Isi **Project URL** dan **Anon Key** dari langkah 3
+5. Klik **Simpan & Lanjutkan** — kredensial disimpan permanen di browser
+6. Setiap device/browser hanya perlu setup ini sekali
+
+**Kelebihan:**
+- ✅ Tidak perlu edit file setiap ada update/deploy
+- ✅ Kredensial tidak ter-commit ke GitHub (lebih aman)
+- ✅ Bisa ganti kredensial kapan saja tanpa push ulang
+
+**Kekurangan:**
+- ⚠️ Setiap browser/device harus setup sekali
+- ⚠️ Kalau hapus data browser (clear cache/cookies), perlu setup ulang
+
+#### Cara B: Hardcode di File (untuk Semua Device Sekaligus)
+
+Buka `index.html` dengan text editor. Cari baris:
 
 ```javascript
-const SUPABASE_URL     = 'https://YOUR_PROJECT.supabase.co';
-const SUPABASE_ANON_KEY = 'YOUR_ANON_KEY_HERE';
+const DEFAULT_URL = '';  // contoh: 'https://xxxxx.supabase.co'
+const DEFAULT_KEY = '';  // contoh: 'eyJhbGciOi...'
 ```
 
-Ganti dengan nilai yang kamu catat di langkah 3. Simpan file.
+Isi dengan kredensial Anda, simpan, lalu upload ke GitHub.
+
+**Kelebihan:**
+- ✅ Semua user langsung bisa pakai (tidak perlu setup masing-masing)
+
+**Kekurangan:**
+- ⚠️ Kalau repo GitHub public, anon key Anda ikut public (walaupun anon key Supabase secara desain memang aman untuk publik asalkan RLS dikonfigurasi dengan benar)
+- ⚠️ Harus push ulang setiap ganti kredensial
 
 ### 5️⃣ Deploy ke GitHub Pages
 
@@ -166,17 +195,44 @@ Nilai Akhir = (Kualitas × 70%) + (Kuantitas × 30%)
 
 ```
 tahfidz-app/
-├── index.html              ← aplikasi (frontend + JS)
-├── supabase-schema.sql     ← database schema (jalankan sekali di Supabase)
-├── migrasi-kuantitas.sql   ← untuk upgrade DB yang sudah ada (jalankan sekali)
-└── README.md               ← panduan ini
+├── index.html                       ← aplikasi (frontend + JS)
+├── manifest.json                    ← konfigurasi PWA
+├── sw.js                            ← service worker PWA
+├── icon-192.png                     ← ikon 192×192
+├── icon-512.png                     ← ikon 512×512
+├── supabase-schema.sql              ← database schema (jalankan sekali di Supabase)
+├── migrasi-kuantitas.sql            ← upgrade DB lama: tambah sistem kuantitas
+├── migrasi-unique-assignment.sql    ← upgrade DB lama: 1 siswa = 1 assignment
+└── README.md                        ← panduan ini
 ```
 
-Hanya **`index.html`** yang perlu di-upload ke GitHub Pages.
+**Untuk deploy**, upload **semua** file ini ke GitHub Pages:
+- `index.html` (wajib)
+- `manifest.json`, `sw.js`, `icon-192.png`, `icon-512.png` (wajib untuk PWA)
+- File SQL (`*.sql`) tidak perlu di-upload ke GitHub, hanya dijalankan sekali di Supabase SQL Editor
 
 ### ⚠️ Kalau Database Sudah Pernah Di-setup Sebelumnya
 
-Jika Anda sudah pernah jalankan `supabase-schema.sql` versi lama (yang belum ada sistem kuantitas), Anda **tidak perlu setup ulang**. Cukup jalankan file **`migrasi-kuantitas.sql`** sekali di SQL Editor Supabase. File ini akan menambahkan kolom baru (`nilai_kualitas`, `jumlah_juz`, `nilai_kuantitas`) tanpa menghapus data yang sudah ada.
+Jika Anda sudah pernah jalankan `supabase-schema.sql` versi lama, jalankan file migrasi berikut **sekali** di Supabase SQL Editor (urutan tidak penting, tapi jalankan keduanya):
+
+1. **`migrasi-kuantitas.sql`** — menambah kolom `nilai_kualitas`, `jumlah_juz`, `nilai_kuantitas`
+2. **`migrasi-unique-assignment.sql`** — memastikan 1 siswa hanya bisa punya 1 assignment
+
+Kedua file migrasi ini aman dijalankan tanpa menghapus data yang sudah ada.
+
+## 📱 Install ke HP (PWA)
+
+Aplikasi ini adalah **Progressive Web App** — bisa di-install ke HP layaknya aplikasi native, dengan ikon di homescreen dan jalan full-screen.
+
+**Cara install:**
+
+- **Chrome Android / Edge Android**: Otomatis muncul banner "Install" di bawah, atau tap menu 3 titik → "Add to Home screen"
+- **Safari iPhone/iPad**: Tap tombol Share (kotak ⬆️) → "Add to Home Screen" → "Add"
+- **Chrome Desktop**: Klik ikon install (⊕) di address bar, atau menu 3 titik → "Install Tahfidz..."
+
+Di dalam aplikasi, buka **Profil → Install Aplikasi → Cara Install** untuk instruksi per device.
+
+Setelah diinstall, aplikasi bisa dibuka dari homescreen tanpa browser, dan **tetap jalan walau koneksi internet putus sejenak** (untuk data yang sudah ter-cache).
 
 ---
 
