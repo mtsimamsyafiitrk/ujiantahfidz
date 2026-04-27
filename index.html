@@ -1537,6 +1537,7 @@ window.submitCekinLanding = async function(tgl, status) {
   showLoading('Menyimpan kehadiran...');
   let berhasil = false;
   let errorMsg = '';
+  let isRlsError = false;
 
   try {
     // Langkah 1: cek apakah record hari ini sudah ada
@@ -1549,28 +1550,37 @@ window.submitCekinLanding = async function(tgl, status) {
     console.log('[CEK IN] select result:', JSON.stringify(selectRes));
 
     if (selectRes.error) {
-      throw new Error('SELECT error: ' + selectRes.error.message + ' (code: ' + selectRes.error.code + ')');
+      // Jika SELECT juga kena RLS (42501) atau 401, berarti tabel belum accessible sama sekali
+      const code = selectRes.error.code || '';
+      isRlsError = (code === '42501' || String(selectRes.error.message).includes('row-level security'));
+      throw new Error('SELECT error: ' + selectRes.error.message + ' (code: ' + code + ')');
     }
 
     if (selectRes.data && selectRes.data.id) {
-      // Sudah ada → UPDATE status saja
-      console.log('[CEK IN] record ada (id=' + selectRes.data.id + '), lakukan UPDATE');
+      // Sudah ada → UPDATE
+      console.log('[CEK IN] record ada (id=' + selectRes.data.id + '), UPDATE');
       const updateRes = await sb.from('kehadiran')
         .update({ status: status, catatan: '', updated_at: new Date().toISOString() })
         .eq('id', selectRes.data.id);
       console.log('[CEK IN] update result:', JSON.stringify(updateRes));
-      if (updateRes.error) throw new Error('UPDATE error: ' + updateRes.error.message);
+      if (updateRes.error) {
+        isRlsError = (updateRes.error.code === '42501');
+        throw new Error('UPDATE error: ' + updateRes.error.message + ' (code: ' + updateRes.error.code + ')');
+      }
     } else {
-      // Belum ada → INSERT baru
-      console.log('[CEK IN] record belum ada, lakukan INSERT');
+      // Belum ada → INSERT
+      console.log('[CEK IN] record belum ada, INSERT');
       const insertRes = await sb.from('kehadiran')
         .insert({ penguji_id: STATE.user.id, tanggal: tgl, status: status, catatan: '' });
       console.log('[CEK IN] insert result:', JSON.stringify(insertRes));
-      if (insertRes.error) throw new Error('INSERT error: ' + insertRes.error.message + ' (code: ' + insertRes.error.code + ')');
+      if (insertRes.error) {
+        isRlsError = (insertRes.error.code === '42501' || String(insertRes.error.message).includes('row-level security'));
+        throw new Error('INSERT error: ' + insertRes.error.message + ' (code: ' + insertRes.error.code + ')');
+      }
     }
 
     berhasil = true;
-    console.log('[CEK IN] kehadiran tersimpan SUKSES');
+    console.log('[CEK IN] kehadiran tersimpan SUKSES ✅');
 
   } catch (e) {
     errorMsg = e.message || String(e);
@@ -1579,29 +1589,40 @@ window.submitCekinLanding = async function(tgl, status) {
 
   hideLoading();
 
-  // Flash animasi lalu masuk dashboard (berhasil atau tidak)
+  // Flash animasi lalu masuk dashboard
   const emojiMap = { HADIR: '✅', SAKIT: '🤒', IZIN: '📋', TANPA_KETERANGAN: '❓' };
   const flash = document.createElement('div');
-  flash.style.cssText = 'position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(15,23,42,0.96);z-index:9999;gap:16px;font-family:inherit';
+  flash.style.cssText = 'position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(15,23,42,0.96);z-index:9999;gap:16px;font-family:inherit;padding:24px';
 
   if (berhasil) {
     flash.innerHTML =
       '<div style="font-size:80px;line-height:1">' + (emojiMap[status] || '✅') + '</div>' +
       '<div style="font-size:22px;font-weight:800;color:white">' + escapeHtml(info && info.label ? info.label : status) + '</div>' +
       '<div style="font-size:13px;color:rgba(255,255,255,0.6)">Kehadiran tercatat — masuk dashboard...</div>';
+  } else if (isRlsError) {
+    // Pesan khusus untuk RLS — lebih informatif untuk admin
+    flash.innerHTML =
+      '<div style="font-size:48px;line-height:1">🔒</div>' +
+      '<div style="font-size:16px;font-weight:800;color:#fca5a5;text-align:center">RLS aktif di tabel kehadiran</div>' +
+      '<div style="background:rgba(0,0,0,0.4);border-radius:10px;padding:12px 16px;max-width:320px;font-size:11px;color:#fde68a;font-family:monospace;text-align:left;line-height:1.7">' +
+        'ALTER TABLE kehadiran<br>DISABLE ROW LEVEL SECURITY;<br><br>' +
+        '<span style="color:rgba(255,255,255,0.5)">-- Jalankan di Supabase SQL Editor</span>' +
+      '</div>' +
+      '<div style="font-size:12px;color:rgba(255,255,255,0.5);text-align:center">Masuk dashboard dalam 4 detik...<br>Absensi dicatat manual oleh admin.</div>';
   } else {
     flash.innerHTML =
-      '<div style="font-size:64px;line-height:1">⚠️</div>' +
-      '<div style="font-size:17px;font-weight:800;color:#fca5a5;text-align:center;padding:0 24px">Kehadiran gagal disimpan</div>' +
-      '<div style="font-size:11px;color:rgba(255,255,255,0.4);max-width:300px;text-align:center;padding:0 16px;word-break:break-all">' + escapeHtml(errorMsg) + '</div>' +
-      '<div style="font-size:13px;color:rgba(255,255,255,0.55);margin-top:4px">Hubungi admin. Masuk dashboard dalam 3 detik...</div>';
+      '<div style="font-size:48px;line-height:1">⚠️</div>' +
+      '<div style="font-size:16px;font-weight:800;color:#fca5a5;text-align:center">Kehadiran gagal disimpan</div>' +
+      '<div style="font-size:11px;color:rgba(255,255,255,0.4);max-width:300px;text-align:center;word-break:break-all">' + escapeHtml(errorMsg) + '</div>' +
+      '<div style="font-size:12px;color:rgba(255,255,255,0.5);margin-top:4px;text-align:center">Masuk dashboard dalam 3 detik...<br>Hubungi admin.</div>';
   }
 
   document.body.appendChild(flash);
+  const delay = berhasil ? 1200 : (isRlsError ? 4000 : 3000);
   setTimeout(function() {
     if (flash.parentNode) flash.parentNode.removeChild(flash);
     masukDashboard();
-  }, berhasil ? 1200 : 3000);
+  }, delay);
 };
 
 // Masuk ke dashboard (sembunyikan cekinPage, tampilkan app + render home)
