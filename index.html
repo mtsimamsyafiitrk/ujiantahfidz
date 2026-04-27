@@ -1525,9 +1525,10 @@ window.handleFingerprintTap = function() {
 
 // Submit dari halaman landing CEK IN
 window.submitCekinLanding = async function(tgl, status) {
-  console.log('[CEK IN] submit:', tgl, status);
+  console.log('[CEK IN] submit tgl=' + tgl + ' status=' + status + ' penguji_id=' + STATE.user.id);
   const info = STATUS_KEHADIRAN[status];
-  // Nonaktifkan semua tombol status
+
+  // Nonaktifkan semua tombol agar tidak double-submit
   document.querySelectorAll('.cekin-status-btn').forEach(b => {
     b.style.pointerEvents = 'none';
     b.style.opacity = '0.5';
@@ -1535,52 +1536,72 @@ window.submitCekinLanding = async function(tgl, status) {
 
   showLoading('Menyimpan kehadiran...');
   let berhasil = false;
+  let errorMsg = '';
+
   try {
-    // Gunakan upsert dengan conflict resolution — lebih sederhana & andal
-    const { error } = await sb.from('kehadiran')
-      .upsert(
-        { penguji_id: STATE.user.id, tanggal: tgl, status, catatan: '', updated_at: new Date().toISOString() },
-        { onConflict: 'penguji_id,tanggal' }
-      );
-    if (error) {
-      // Fallback: coba insert biasa jika upsert gagal (mis. constraint belum ada)
-      console.warn('[CEK IN] upsert gagal, coba insert biasa:', error.message);
-      const { data: existing } = await sb.from('kehadiran')
-        .select('id').eq('penguji_id', STATE.user.id).eq('tanggal', tgl).maybeSingle();
-      if (existing?.id) {
-        const { error: e2 } = await sb.from('kehadiran')
-          .update({ status, catatan: '', updated_at: new Date().toISOString() })
-          .eq('id', existing.id);
-        if (e2) throw e2;
-      } else {
-        const { error: e3 } = await sb.from('kehadiran')
-          .insert({ penguji_id: STATE.user.id, tanggal: tgl, status, catatan: '' });
-        if (e3) throw e3;
-      }
+    // Langkah 1: cek apakah record hari ini sudah ada
+    const selectRes = await sb.from('kehadiran')
+      .select('id, status')
+      .eq('penguji_id', STATE.user.id)
+      .eq('tanggal', tgl)
+      .maybeSingle();
+
+    console.log('[CEK IN] select result:', JSON.stringify(selectRes));
+
+    if (selectRes.error) {
+      throw new Error('SELECT error: ' + selectRes.error.message + ' (code: ' + selectRes.error.code + ')');
     }
+
+    if (selectRes.data && selectRes.data.id) {
+      // Sudah ada → UPDATE status saja
+      console.log('[CEK IN] record ada (id=' + selectRes.data.id + '), lakukan UPDATE');
+      const updateRes = await sb.from('kehadiran')
+        .update({ status: status, catatan: '', updated_at: new Date().toISOString() })
+        .eq('id', selectRes.data.id);
+      console.log('[CEK IN] update result:', JSON.stringify(updateRes));
+      if (updateRes.error) throw new Error('UPDATE error: ' + updateRes.error.message);
+    } else {
+      // Belum ada → INSERT baru
+      console.log('[CEK IN] record belum ada, lakukan INSERT');
+      const insertRes = await sb.from('kehadiran')
+        .insert({ penguji_id: STATE.user.id, tanggal: tgl, status: status, catatan: '' });
+      console.log('[CEK IN] insert result:', JSON.stringify(insertRes));
+      if (insertRes.error) throw new Error('INSERT error: ' + insertRes.error.message + ' (code: ' + insertRes.error.code + ')');
+    }
+
     berhasil = true;
+    console.log('[CEK IN] kehadiran tersimpan SUKSES');
+
   } catch (e) {
-    console.error('[CEK IN] Gagal simpan kehadiran:', e);
-    // Tetap lanjutkan ke dashboard — kehadiran bisa dicatat admin
-    showToast('⚠️ Kehadiran belum tersimpan, hubungi admin. Masuk dashboard...');
+    errorMsg = e.message || String(e);
+    console.error('[CEK IN] GAGAL:', errorMsg);
   }
 
   hideLoading();
 
-  // Animasi sukses lalu masuk dashboard — baik berhasil maupun tidak
-  const emojiMap = { HADIR:'✅', SAKIT:'🤒', IZIN:'📋', TANPA_KETERANGAN:'❓' };
+  // Flash animasi lalu masuk dashboard (berhasil atau tidak)
+  const emojiMap = { HADIR: '✅', SAKIT: '🤒', IZIN: '📋', TANPA_KETERANGAN: '❓' };
   const flash = document.createElement('div');
-  flash.id = 'cekinSuccessFlash';
-  flash.style.cssText = 'position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(15,23,42,0.95);z-index:9999;gap:14px';
-  flash.innerHTML = '<div style="font-size:72px">' + (emojiMap[status] || '✅') + '</div>'
-    + '<div style="font-size:22px;font-weight:800;color:white">' + escapeHtml(info?.label || status) + '</div>'
-    + '<div style="font-size:13px;color:rgba(255,255,255,0.6)">' + (berhasil ? 'Kehadiran tercatat — masuk dashboard...' : 'Masuk dashboard...') + '</div>';
-  document.body.appendChild(flash);
+  flash.style.cssText = 'position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(15,23,42,0.96);z-index:9999;gap:16px;font-family:inherit';
 
-  setTimeout(() => {
+  if (berhasil) {
+    flash.innerHTML =
+      '<div style="font-size:80px;line-height:1">' + (emojiMap[status] || '✅') + '</div>' +
+      '<div style="font-size:22px;font-weight:800;color:white">' + escapeHtml(info && info.label ? info.label : status) + '</div>' +
+      '<div style="font-size:13px;color:rgba(255,255,255,0.6)">Kehadiran tercatat — masuk dashboard...</div>';
+  } else {
+    flash.innerHTML =
+      '<div style="font-size:64px;line-height:1">⚠️</div>' +
+      '<div style="font-size:17px;font-weight:800;color:#fca5a5;text-align:center;padding:0 24px">Kehadiran gagal disimpan</div>' +
+      '<div style="font-size:11px;color:rgba(255,255,255,0.4);max-width:300px;text-align:center;padding:0 16px;word-break:break-all">' + escapeHtml(errorMsg) + '</div>' +
+      '<div style="font-size:13px;color:rgba(255,255,255,0.55);margin-top:4px">Hubungi admin. Masuk dashboard dalam 3 detik...</div>';
+  }
+
+  document.body.appendChild(flash);
+  setTimeout(function() {
     if (flash.parentNode) flash.parentNode.removeChild(flash);
     masukDashboard();
-  }, 1200);
+  }, berhasil ? 1200 : 3000);
 };
 
 // Masuk ke dashboard (sembunyikan cekinPage, tampilkan app + render home)
