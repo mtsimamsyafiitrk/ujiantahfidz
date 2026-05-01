@@ -1909,8 +1909,8 @@ async function renderKehadiranPenguji() {
     (data || []).forEach(k => peta[k.tanggal] = k);
 
     // Hitung poin
-    const totalPoin = (data || []).reduce((s, k) => s + (STATUS_KEHADIRAN[k.status]?.poin || 0), 0);
-    const maxPoin = KEHADIRAN_TANGGAL.length;
+    const totalPoin = (data || []).reduce((s, k) => s + (STATUS_KEHADIRAN[k.status]?.poin || 0), 0) * 2;
+    const maxPoin = KEHADIRAN_TANGGAL.length * 2;
 
     box.innerHTML = `
       <div class="card" style="border-left:4px solid #059669">
@@ -2096,12 +2096,12 @@ async function renderAdminKehadiran() {
       const milikDia = allKehadiran.filter(k => k.penguji_id === p.id);
       const peta = {};
       milikDia.forEach(k => peta[k.tanggal] = k);
-      const totalPoin = milikDia.reduce((s, k) => s + (STATUS_KEHADIRAN[k.status]?.poin || 0), 0);
+      const totalPoin = milikDia.reduce((s, k) => s + (STATUS_KEHADIRAN[k.status]?.poin || 0), 0) * 2;
       return { penguji: p, peta, totalPoin };
     });
 
     // Statistik global
-    const totalPossiblePoin = allPenguji.length * KEHADIRAN_TANGGAL.length;
+    const totalPossiblePoin = allPenguji.length * KEHADIRAN_TANGGAL.length * 2;
     const totalActualPoin = rekap.reduce((s, r) => s + r.totalPoin, 0);
     const persenGlobal = totalPossiblePoin ? Math.round((totalActualPoin / totalPossiblePoin) * 100) : 0;
 
