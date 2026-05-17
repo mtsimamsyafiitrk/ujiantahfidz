@@ -2684,10 +2684,9 @@ async function renderPenilaianList() {
       return;
     }
 
-    // Kelompokkan berdasarkan kelas (untuk filter)
+    // Kelompokkan berdasarkan kelas (untuk filter), sembunyikan kelas yang diarsipkan
     const kelasSet = [...new Set(assignments.map(a => a.siswa?.kelas).filter(Boolean))].sort();
-    // Untuk penguji: sembunyikan kelas yang diarsipkan
-    const kelasAktif = isAdmin ? kelasSet : kelasSet.filter(k => !STATE.kelasArsip.includes(k));
+    const kelasAktif = kelasSet.filter(k => !STATE.kelasArsip.includes(k));
 
     const filterHtml = `
       <div class="filter-bar">
@@ -2702,7 +2701,7 @@ async function renderPenilaianList() {
     `;
 
     let filtered = assignments.filter(a => {
-      if (!isAdmin && STATE.kelasArsip.includes(a.siswa?.kelas)) return false;
+      if (STATE.kelasArsip.includes(a.siswa?.kelas)) return false;
       if (STATE.filter.status !== 'all' && a.status !== STATE.filter.status) return false;
       if (STATE.filter.kelas !== 'all' && a.siswa?.kelas !== STATE.filter.kelas) return false;
       return true;
