@@ -1793,13 +1793,6 @@ async function renderHome() {
       <p>Assalamu'alaikum, <strong>${escapeHtml(STATE.user.nama || STATE.user.username)}</strong> ${isAdmin ? '<span class="badge badge-admin" style="margin-left:4px">ADMIN</span>' : ''}</p>
     </div>
 
-    ${!isAdmin ? `
-      <div id="kehadiranPengujiBox">
-        <div class="card">
-          <div class="text-center" style="padding:20px"><div class="spinner"></div></div>
-        </div>
-      </div>
-    ` : ''}
 
     <div id="liveStats">
       <div class="card">
@@ -1881,12 +1874,8 @@ async function renderHome() {
       </div>
     `;
 
-    // Untuk admin: render progress per penguji
     if (isAdmin) {
       await renderProgressPerPenguji();
-    } else {
-      // Penguji: tampilkan card kehadiran
-      await renderKehadiranPenguji();
     }
   } catch (e) {
     document.getElementById('liveStats').innerHTML = `
@@ -3842,7 +3831,7 @@ function renderHalamanPenguji() {
   c.innerHTML = `
     <div class="page-header">
       <h2><span class="material-symbols-outlined" style="font-size:24px">groups</span> Penguji</h2>
-      <p>Kelola akun penguji, penugasan, dan kehadiran</p>
+      <p>Kelola akun penguji dan penugasan</p>
     </div>
 
     <div class="filter-bar">
@@ -3851,9 +3840,6 @@ function renderHalamanPenguji() {
       </button>
       <button class="filter-chip ${PENGUJI_TAB === 'assignment' ? 'active' : ''}" onclick="switchPengujiTab('assignment')">
         📋 Assignment
-      </button>
-      <button class="filter-chip ${PENGUJI_TAB === 'kehadiran' ? 'active' : ''}" onclick="switchPengujiTab('kehadiran')">
-        📅 Kehadiran
       </button>
     </div>
 
