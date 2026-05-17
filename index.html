@@ -1754,20 +1754,21 @@ async function fetchAllPenilaianLengkap() {
 }
 
 async function fetchStatsGlobal() {
-  // Hitung jumlah assignment total & yang sudah selesai
-  const { data, error } = await sb.from('assignment').select('status');
+  const { data, error } = await sb.from('assignment').select('status, siswa:siswa_id(kelas)');
   if (error) throw error;
-  const total = data.length;
-  const selesai = data.filter(a => a.status === 'selesai').length;
+  const aktif = data.filter(a => !STATE.kelasArsip.includes(a.siswa?.kelas));
+  const total = aktif.length;
+  const selesai = aktif.filter(a => a.status === 'selesai').length;
   return { total, selesai, belum: total - selesai };
 }
 
 async function fetchStatsForPenguji(pengujiId) {
   const { data, error } = await sb.from('assignment')
-    .select('status').eq('penguji_id', pengujiId);
+    .select('status, siswa:siswa_id(kelas)').eq('penguji_id', pengujiId);
   if (error) throw error;
-  const total = data.length;
-  const selesai = data.filter(a => a.status === 'selesai').length;
+  const aktif = data.filter(a => !STATE.kelasArsip.includes(a.siswa?.kelas));
+  const total = aktif.length;
+  const selesai = aktif.filter(a => a.status === 'selesai').length;
   return { total, selesai, belum: total - selesai };
 }
 
@@ -2542,13 +2543,14 @@ async function renderProgressPerPenguji() {
     // Ambil semua penguji + semua assignment
     const [pengujiRes, assignRes] = await Promise.all([
       sb.from('penguji').select('id, nama, username, role').order('nama'),
-      sb.from('assignment').select('penguji_id, status')
+      sb.from('assignment').select('penguji_id, status, siswa:siswa_id(kelas)')
     ]);
     if (pengujiRes.error) throw pengujiRes.error;
     if (assignRes.error) throw assignRes.error;
 
     const allPenguji = pengujiRes.data || [];
-    const allAssign = assignRes.data || [];
+    // Exclude archived classes from progress stats
+    const allAssign = (assignRes.data || []).filter(a => !STATE.kelasArsip.includes(a.siswa?.kelas));
 
     // Filter: tampilkan hanya penguji yang punya assignment (biar tidak penuh)
     const perPenguji = allPenguji.map(p => {
@@ -3434,11 +3436,12 @@ async function renderRekap() {
       return;
     }
 
-    // Kelompokkan kelas untuk filter
-    const kelasSet = [...new Set(data.map(p => p.siswa?.kelas).filter(Boolean))].sort();
+    // Kelompokkan kelas untuk filter (exclude arsip)
+    const kelasSet = [...new Set(data.map(p => p.siswa?.kelas).filter(k => k && !STATE.kelasArsip.includes(k)))].sort();
     const pengujiSet = [...new Set(data.map(p => p.penguji?.nama).filter(Boolean))].sort();
 
     let filtered = data.filter(p => {
+      if (STATE.kelasArsip.includes(p.siswa?.kelas)) return false;
       if (STATE.filter.kelas !== 'all' && p.siswa?.kelas !== STATE.filter.kelas) return false;
       if (STATE.filter.penguji !== 'all' && p.penguji?.nama !== STATE.filter.penguji) return false;
       return true;
@@ -4091,7 +4094,8 @@ async function renderAdminTab() {
 // ── ADMIN: SISWA ─────────────────────────────────────
 async function renderAdminSiswa() {
   try {
-    const siswa = await fetchAllSiswa();
+    const siswaAll = await fetchAllSiswa();
+    const siswa = siswaAll.filter(s => !STATE.kelasArsip.includes(s.kelas));
     getTabBodyEl().innerHTML = `
       <div class="card">
         <div class="card-title">
@@ -4518,11 +4522,16 @@ function deletePenguji(id, nama) {
 // ── ADMIN: ASSIGNMENT ──────────────────────────────
 async function renderAdminAssignment() {
   try {
-    const [siswa, penguji, assignments] = await Promise.all([
+    const [siswaAll, penguji, assignmentsAll] = await Promise.all([
       fetchAllSiswa(),
       fetchAllPenguji(),
       fetchAllAssignment()
     ]);
+
+    // Exclude archived classes
+    const siswa = siswaAll.filter(s => !STATE.kelasArsip.includes(s.kelas));
+    const arsipIds = new Set(siswaAll.filter(s => STATE.kelasArsip.includes(s.kelas)).map(s => s.id));
+    const assignments = assignmentsAll.filter(a => !arsipIds.has(a.siswa_id));
 
     const pengujiNonAdmin = penguji; // admin juga bisa ditugaskan
 
