@@ -1337,7 +1337,8 @@ const STATE = {
     penilaian: [],
     surah: []
   },
-  filter: { kelas: 'all', status: 'all', penguji: 'all' }
+  filter: { kelas: 'all', status: 'all', penguji: 'all' },
+  kelasArsip: []
 };
 
 // Confirm state
@@ -1571,6 +1572,7 @@ async function enterApp() {
     const { data } = await sb.from('pengaturan').select('*').eq('id', 1).single();
     if (data) {
       STATE.lembaga = data;
+      STATE.kelasArsip = JSON.parse(data.kelas_arsip || '[]');
       document.getElementById('header-title').textContent = data.nama_lembaga;
       document.getElementById('header-sub').textContent =
         'Penilaian Tahfidz · ' + (data.alamat || '');
@@ -2684,13 +2686,15 @@ async function renderPenilaianList() {
 
     // Kelompokkan berdasarkan kelas (untuk filter)
     const kelasSet = [...new Set(assignments.map(a => a.siswa?.kelas).filter(Boolean))].sort();
+    // Untuk penguji: sembunyikan kelas yang diarsipkan
+    const kelasAktif = isAdmin ? kelasSet : kelasSet.filter(k => !STATE.kelasArsip.includes(k));
 
     const filterHtml = `
       <div class="filter-bar">
         <button class="filter-chip ${STATE.filter.status === 'all' ? 'active' : ''}" onclick="STATE.filter.status='all'; renderPenilaianList()">Semua</button>
         <button class="filter-chip ${STATE.filter.status === 'belum' ? 'active' : ''}" onclick="STATE.filter.status='belum'; renderPenilaianList()">Belum Dinilai</button>
         <button class="filter-chip ${STATE.filter.status === 'selesai' ? 'active' : ''}" onclick="STATE.filter.status='selesai'; renderPenilaianList()">Selesai</button>
-        ${kelasSet.map(k => `
+        ${kelasAktif.map(k => `
           <button class="filter-chip ${STATE.filter.kelas === k ? 'active' : ''}" onclick="STATE.filter.kelas='${escapeHtml(k)}'; renderPenilaianList()">${escapeHtml(k)}</button>
         `).join('')}
         ${STATE.filter.kelas !== 'all' ? `<button class="filter-chip active" onclick="STATE.filter.kelas='all'; renderPenilaianList()" style="background:#dc2626;border-color:#dc2626">✕ Kelas</button>` : ''}
@@ -2698,6 +2702,7 @@ async function renderPenilaianList() {
     `;
 
     let filtered = assignments.filter(a => {
+      if (!isAdmin && STATE.kelasArsip.includes(a.siswa?.kelas)) return false;
       if (STATE.filter.status !== 'all' && a.status !== STATE.filter.status) return false;
       if (STATE.filter.kelas !== 'all' && a.siswa?.kelas !== STATE.filter.kelas) return false;
       return true;
@@ -3919,6 +3924,9 @@ function renderHalamanPengaturan() {
         <button class="filter-chip ${PENGATURAN_TAB === 'sistem' ? 'active' : ''}" onclick="switchPengaturanTab('sistem')">
           🛠️ Sistem
         </button>
+        <button class="filter-chip ${PENGATURAN_TAB === 'kelas' ? 'active' : ''}" onclick="switchPengaturanTab('kelas')">
+          📁 Kelas
+        </button>
       ` : ''}
     </div>
 
@@ -3940,6 +3948,7 @@ async function renderPengaturanTab() {
     case 'lembaga': return renderAdminLembagaOnly();   // hanya form lembaga
     case 'surah':   return renderAdminSurah();
     case 'sistem':  return renderTabSistem();           // koneksi DB + zona berbahaya + install app
+    case 'kelas':   return renderTabKelas();            // manajemen arsip kelas
   }
 }
 
@@ -5875,6 +5884,86 @@ async function saveLembaga() {
     document.getElementById('header-sub').textContent = 'Penilaian Tahfidz · ' + alamat;
     hideLoading();
     showToast('✅ Data lembaga tersimpan');
+  } catch (e) {
+    hideLoading();
+    showToast('❌ ' + e.message);
+  }
+}
+
+async function renderTabKelas() {
+  const body = document.getElementById('pengaturanTabBody');
+  body.innerHTML = `<div class="card"><div class="text-center" style="padding:20px"><div class="spinner"></div></div></div>`;
+
+  const { data: siswaData, error } = await sb.from('siswa').select('kelas');
+  if (error) {
+    body.innerHTML = `<div class="alert alert-danger">Gagal memuat data: ${escapeHtml(error.message)}</div>`;
+    return;
+  }
+
+  const allKelas = [...new Set(siswaData.map(s => s.kelas).filter(Boolean))].sort();
+  const arsip = STATE.kelasArsip || [];
+
+  body.innerHTML = `
+    <div class="card">
+      <div class="card-title">📁 Status Kelas</div>
+      <p class="text-small text-muted" style="margin-bottom:14px">
+        Kelas yang diarsipkan tidak akan muncul di tampilan guru. Data penilaian tetap tersimpan dan bisa dilihat di Rekap.
+      </p>
+      ${allKelas.length === 0
+        ? '<div class="empty-state"><div class="empty-icon">📭</div><p>Belum ada data siswa.</p></div>'
+        : allKelas.map(k => {
+            const isArsip = arsip.includes(k);
+            return `
+              <div class="list-item" style="padding:10px 0;border-bottom:1px solid var(--border)">
+                <div class="list-avatar" style="background:${isArsip ? '#f3f4f6' : 'var(--primary-gradient)'};color:${isArsip ? '#6b7280' : 'white'}">
+                  ${isArsip ? '📦' : '✓'}
+                </div>
+                <div class="list-info">
+                  <div class="list-name">Kelas ${escapeHtml(k)}</div>
+                  <div class="list-meta">
+                    <span class="badge" style="${isArsip ? 'background:#f3f4f6;color:#6b7280' : 'background:#d1fae5;color:#047857'}">
+                      ${isArsip ? 'Diarsipkan — tersembunyi dari guru' : 'Aktif — tampil di semua guru'}
+                    </span>
+                  </div>
+                </div>
+                <div class="list-actions">
+                  <button class="btn ${isArsip ? 'btn-outline' : 'btn-danger'} btn-sm"
+                    onclick="toggleKelasArsip('${escapeHtml(k)}')">
+                    ${isArsip ? '✓ Aktifkan' : '📦 Arsipkan'}
+                  </button>
+                </div>
+              </div>
+            `;
+          }).join('')}
+    </div>
+    <div class="card" style="background:#fef9c3;border:1px solid #fde047">
+      <div class="card-title" style="color:#854d0e">ℹ️ Catatan</div>
+      <p class="text-small" style="color:#854d0e;margin:0">
+        Guru hanya melihat kelas yang <strong>Aktif</strong>. Admin tetap bisa melihat semua kelas di halaman Rekap.
+      </p>
+    </div>
+  `;
+}
+
+async function toggleKelasArsip(kelas) {
+  const arsip = [...(STATE.kelasArsip || [])];
+  const idx = arsip.indexOf(kelas);
+  if (idx >= 0) {
+    arsip.splice(idx, 1);
+  } else {
+    arsip.push(kelas);
+  }
+
+  showLoading('Menyimpan...');
+  try {
+    const { error } = await sb.from('pengaturan')
+      .update({ kelas_arsip: JSON.stringify(arsip) })
+      .eq('id', 1);
+    if (error) throw error;
+    STATE.kelasArsip = arsip;
+    hideLoading();
+    showToast(idx >= 0 ? `✅ Kelas ${kelas} diaktifkan` : `📦 Kelas ${kelas} diarsipkan`);
+    renderTabKelas();
   } catch (e) {
     hideLoading();
     showToast('❌ ' + e.message);
