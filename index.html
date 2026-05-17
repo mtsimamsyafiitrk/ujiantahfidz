@@ -5893,14 +5893,25 @@ async function renderTabKelas() {
   const body = document.getElementById('pengaturanTabBody');
   body.innerHTML = `<div class="card"><div class="text-center" style="padding:20px"><div class="spinner"></div></div></div>`;
 
-  const { data: siswaData, error } = await sb.from('siswa').select('kelas');
-  if (error) {
-    body.innerHTML = `<div class="alert alert-danger">Gagal memuat data: ${escapeHtml(error.message)}</div>`;
+  const [siswaRes, pengaturanRes] = await Promise.all([
+    sb.from('siswa').select('kelas'),
+    sb.from('pengaturan').select('kelas_arsip').eq('id', 1).single()
+  ]);
+
+  if (siswaRes.error) {
+    body.innerHTML = `<div class="alert alert-danger">Gagal memuat data siswa: ${escapeHtml(siswaRes.error.message)}</div>`;
+    return;
+  }
+  if (pengaturanRes.error) {
+    body.innerHTML = `<div class="alert alert-danger">Gagal memuat pengaturan: ${escapeHtml(pengaturanRes.error.message)}<br><br><small>Pastikan kolom <code>kelas_arsip</code> sudah ditambahkan di tabel pengaturan, lalu reload halaman Supabase API (Settings → API → Reload).</small></div>`;
     return;
   }
 
-  const allKelas = [...new Set(siswaData.map(s => s.kelas).filter(Boolean))].sort();
-  const arsip = STATE.kelasArsip || [];
+  // Sync STATE dengan data terbaru dari DB
+  STATE.kelasArsip = JSON.parse(pengaturanRes.data?.kelas_arsip || '[]');
+  const arsip = STATE.kelasArsip;
+
+  const allKelas = [...new Set(siswaRes.data.map(s => s.kelas).filter(Boolean))].sort();
 
   body.innerHTML = `
     <div class="card">
@@ -5921,7 +5932,7 @@ async function renderTabKelas() {
                   <div class="list-name">Kelas ${escapeHtml(k)}</div>
                   <div class="list-meta">
                     <span class="badge" style="${isArsip ? 'background:#f3f4f6;color:#6b7280' : 'background:#d1fae5;color:#047857'}">
-                      ${isArsip ? 'Diarsipkan — tersembunyi dari guru' : 'Aktif — tampil di semua guru'}
+                      ${isArsip ? 'Diarsipkan — tersembunyi dari semua' : 'Aktif — tampil di semua pengguna'}
                     </span>
                   </div>
                 </div>
@@ -5938,7 +5949,7 @@ async function renderTabKelas() {
     <div class="card" style="background:#fef9c3;border:1px solid #fde047">
       <div class="card-title" style="color:#854d0e">ℹ️ Catatan</div>
       <p class="text-small" style="color:#854d0e;margin:0">
-        Guru hanya melihat kelas yang <strong>Aktif</strong>. Admin tetap bisa melihat semua kelas di halaman Rekap.
+        Kelas diarsipkan → tersembunyi dari tampilan Input Penilaian dan Tugas Menilai. Data tetap ada di Rekap.
       </p>
     </div>
   `;
@@ -5959,7 +5970,17 @@ async function toggleKelasArsip(kelas) {
       .update({ kelas_arsip: JSON.stringify(arsip) })
       .eq('id', 1);
     if (error) throw error;
-    STATE.kelasArsip = arsip;
+
+    // Verifikasi: baca ulang dari DB untuk memastikan tersimpan
+    const { data: check, error: checkErr } = await sb.from('pengaturan')
+      .select('kelas_arsip').eq('id', 1).single();
+    if (checkErr) throw checkErr;
+
+    const tersimpan = JSON.parse(check?.kelas_arsip || '[]');
+    const berhasil = idx >= 0 ? !tersimpan.includes(kelas) : tersimpan.includes(kelas);
+    if (!berhasil) throw new Error('Data tidak tersimpan. Pastikan kolom kelas_arsip ada di tabel pengaturan dan schema cache Supabase sudah di-reload (Settings → API → Reload).');
+
+    STATE.kelasArsip = tersimpan;
     hideLoading();
     showToast(idx >= 0 ? `✅ Kelas ${kelas} diaktifkan` : `📦 Kelas ${kelas} diarsipkan`);
     renderTabKelas();
