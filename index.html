@@ -136,6 +136,19 @@
     box-shadow: 0 2px 6px rgba(37,99,235,0.25);
   }
 
+  .logout-btn {
+    background: rgba(239,68,68,0.12);
+    color: #dc2626;
+    border: none;
+    border-radius: 999px;
+    width: 34px; height: 34px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background 0.2s;
+  }
+  .logout-btn:hover { background: rgba(239,68,68,0.22); }
+
   /* ── BOTTOM NAV ── */
   .bottom-nav {
     position: fixed; bottom: 0; left: 0; right: 0;
@@ -1006,6 +1019,9 @@
         <span class="material-symbols-outlined" style="font-size:14px">person</span>
         <span id="userChipName">User</span>
       </button>
+      <button class="logout-btn" onclick="handleLogout()" title="Keluar">
+        <span class="material-symbols-outlined" style="font-size:18px">logout</span>
+      </button>
     </div>
   </header>
 
@@ -1586,7 +1602,7 @@ async function enterApp() {
 function renderBottomNav() {
   const isAdmin = STATE.user.role === 'admin';
   // 5 menu untuk admin: Dashboard, Penguji, Siswa, Rekap, Pengaturan
-  // 4 menu untuk penguji: Dashboard, Tugas, Rekap, Pengaturan
+  // 3 menu untuk penguji/ketua_tahfidz: Dashboard, Tugas, Rekap
   const items = isAdmin ? [
     { id: 'home',       icon: 'dashboard',  label: 'Dashboard' },
     { id: 'penguji',    icon: 'groups',     label: 'Penguji' },
@@ -1596,8 +1612,7 @@ function renderBottomNav() {
   ] : [
     { id: 'home',       icon: 'dashboard',  label: 'Dashboard' },
     { id: 'tugas',      icon: 'edit_note',  label: 'Tugas' },
-    { id: 'rekap',      icon: 'analytics',  label: 'Rekap' },
-    { id: 'pengaturan', icon: 'settings',   label: 'Pengaturan' }
+    { id: 'rekap',      icon: 'analytics',  label: 'Rekap' }
   ];
   document.getElementById('bottomNavInner').innerHTML = items
     .map(i => `
@@ -1790,7 +1805,7 @@ async function renderHome() {
   c.innerHTML = `
     <div class="page-header">
       <h2><span class="material-symbols-outlined" style="font-size:24px">dashboard</span> Dashboard</h2>
-      <p>Assalamu'alaikum, <strong>${escapeHtml(STATE.user.nama || STATE.user.username)}</strong> ${isAdmin ? '<span class="badge badge-admin" style="margin-left:4px">ADMIN</span>' : ''}</p>
+      <p>Assalamu'alaikum, <strong>${isAdmin ? '' : 'Ustadz '}${escapeHtml(STATE.user.nama || STATE.user.username)}</strong> ${isAdmin ? '<span class="badge badge-admin" style="margin-left:4px">ADMIN</span>' : (STATE.user.role === 'ketua_tahfidz' ? '<span class="badge badge-green" style="margin-left:4px">Ketua Tahfidz</span>' : '')}</p>
     </div>
 
 
@@ -3415,7 +3430,15 @@ async function renderRekap() {
   `;
 
   try {
-    const data = await fetchAllPenilaianLengkap();
+    const isAdmin = STATE.user.role === 'admin';
+    const isKetuaTahfidz = STATE.user.role === 'ketua_tahfidz';
+    const canSeeAll = isAdmin || isKetuaTahfidz;
+    let allData = await fetchAllPenilaianLengkap();
+    // Penguji biasa hanya lihat rekapnya sendiri
+    if (!canSeeAll) {
+      allData = allData.filter(p => p.penguji?.id === STATE.user.id);
+    }
+    const data = allData;
     if (!data.length) {
       document.getElementById('rekapBody').innerHTML = `
         <div class="empty-state">
@@ -3427,12 +3450,12 @@ async function renderRekap() {
 
     // Kelompokkan kelas untuk filter (exclude arsip)
     const kelasSet = [...new Set(data.map(p => p.siswa?.kelas).filter(k => k && !STATE.kelasArsip.includes(k)))].sort();
-    const pengujiSet = [...new Set(data.map(p => p.penguji?.nama).filter(Boolean))].sort();
+    const pengujiSet = canSeeAll ? [...new Set(data.map(p => p.penguji?.nama).filter(Boolean))].sort() : [];
 
     let filtered = data.filter(p => {
       if (STATE.kelasArsip.includes(p.siswa?.kelas)) return false;
       if (STATE.filter.kelas !== 'all' && p.siswa?.kelas !== STATE.filter.kelas) return false;
-      if (STATE.filter.penguji !== 'all' && p.penguji?.nama !== STATE.filter.penguji) return false;
+      if (canSeeAll && STATE.filter.penguji !== 'all' && p.penguji?.nama !== STATE.filter.penguji) return false;
       return true;
     });
 
@@ -3954,7 +3977,9 @@ function renderTabProfil() {
       <div style="margin-top:8px">
         ${isAdmin
           ? '<span class="badge badge-admin">👑 Administrator</span>'
-          : '<span class="badge badge-blue">📖 Penguji</span>'}
+          : u.role === 'ketua_tahfidz'
+            ? '<span class="badge badge-green">🎓 Ketua Tahfidz</span>'
+            : '<span class="badge badge-blue">📖 Penguji</span>'}
       </div>
     </div>
 
@@ -4390,7 +4415,9 @@ async function renderAdminPenguji() {
                 <span>@${escapeHtml(p.username)}</span>
                 ${p.role === 'admin'
                   ? '<span class="badge badge-admin">👑 Admin</span>'
-                  : '<span class="badge badge-blue">📖 Penguji</span>'}
+                  : p.role === 'ketua_tahfidz'
+                    ? '<span class="badge badge-green">🎓 Ketua Tahfidz</span>'
+                    : '<span class="badge badge-blue">📖 Penguji</span>'}
               </div>
             </div>
             <div class="list-actions">
@@ -4436,6 +4463,7 @@ function openFormPenguji(existing = null) {
       <label>Role <span class="req">*</span></label>
       <select id="pfRole">
         <option value="penguji" ${p.role === 'penguji' ? 'selected' : ''}>Penguji</option>
+        <option value="ketua_tahfidz" ${p.role === 'ketua_tahfidz' ? 'selected' : ''}>Ketua Tahfidz</option>
         <option value="admin" ${p.role === 'admin' ? 'selected' : ''}>Administrator</option>
       </select>
     </div>
