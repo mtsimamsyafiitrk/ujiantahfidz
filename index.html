@@ -3054,7 +3054,20 @@ function updateBaris(idx, field, val) {
 }
 
 function tambahBarisNilai() {
-  FORM_STATE.baris.push({ id: null, surah_nama: '', kelancaran: '', tajwid: '', kekuatan_hafalan: '', adab_tartil: '' });
+  let nextSurahNama = '';
+  const baris = FORM_STATE.baris;
+  if (baris.length > 0) {
+    const lastSurahNama = baris[baris.length - 1].surah_nama;
+    if (lastSurahNama) {
+      const surahList = STATE.cache.surah || [];
+      const lastSurah = surahList.find(s => s.nama === lastSurahNama);
+      if (lastSurah) {
+        const nextSurah = surahList.find(s => s.nomor === lastSurah.nomor + 1);
+        if (nextSurah) nextSurahNama = nextSurah.nama;
+      }
+    }
+  }
+  FORM_STATE.baris.push({ id: null, surah_nama: nextSurahNama, kelancaran: '', tajwid: '', kekuatan_hafalan: '', adab_tartil: '' });
   renderBarisNilai();
 }
 
