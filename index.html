@@ -1119,6 +1119,69 @@ const TARGET_JUZ = { 7: 2, 8: 4, 9: 6 };
 const AMBANG_SETORAN = 76;
 
 // ═════════════════════════════════════════════════════════════════
+// KATEGORI SISWA
+// ═════════════════════════════════════════════════════════════════
+const KATEGORI_LIST = [
+  { value: 'ALQURAN_LANJUT', label: "Al-Qur'an Lanjut",  badge: 'badge-blue',   icon: '📚' },
+  { value: 'ALQURAN_PEMULA', label: "Al-Qur'an Pemula",  badge: 'badge-cyan',   icon: '📖' },
+  { value: 'TAHAP_IQRA',     label: "Tahap Iqra'",       badge: 'badge-green',  icon: '🔤' }
+];
+
+// 22 surah target untuk TAHAP_IQRA (Ad-Dhuha s.d. An-Nas)
+const SURAH_TARGET_IQRA = [
+  'Ad-Duha','Asy-Syarh','At-Tin',"Al-'Alaq",'Al-Qadr',
+  'Al-Bayyinah','Az-Zalzalah',"Al-'Adiyat","Al-Qari'ah",'At-Takasur',
+  "Al-'Asr",'Al-Humazah','Al-Fil','Quraisy',"Al-Ma'un",
+  'Al-Kausar','Al-Kafirun','An-Nasr','Al-Lahab','Al-Ikhlas',
+  'Al-Falaq','An-Nas'
+];
+
+function getKategori(siswa) {
+  return (siswa && siswa.kategori) ? siswa.kategori : 'ALQURAN_LANJUT';
+}
+
+function getKategoriInfo(kategori) {
+  return KATEGORI_LIST.find(k => k.value === (kategori || 'ALQURAN_LANJUT')) || KATEGORI_LIST[0];
+}
+
+function getTargetKuantitasLabel(siswa) {
+  const kat = getKategori(siswa);
+  if (kat === 'TAHAP_IQRA')     return `${SURAH_TARGET_IQRA.length} surah (Ad-Dhuha s.d. An-Nas)`;
+  if (kat === 'ALQURAN_PEMULA') return '1 juz (Juz 30)';
+  return `${getTargetJuz(siswa?.kelas)} juz (target kelas ${siswa?.kelas || '-'})`;
+}
+
+// Hitung kuantitas TAHAP_IQRA: surah dari daftar target yang tersetor ≥ AMBANG_SETORAN
+function hitungKuantitasIqra(baris) {
+  const setor = [];
+  for (const b of baris) {
+    if (!b.surah_nama) continue;
+    if (!SURAH_TARGET_IQRA.includes(b.surah_nama)) continue;
+    if (hitungTotal(b) >= AMBANG_SETORAN) setor.push(b.surah_nama);
+  }
+  const count = setor.length;
+  const total = SURAH_TARGET_IQRA.length;
+  return { count, total, setor, persen: (count / total) * 100 };
+}
+
+// Hitung kuantitas ALQURAN_PEMULA: hanya hitung juz 30, target = 1 juz
+function hitungKuantitasPemula(baris) {
+  const hasil = hitungJuzOtomatis(baris);
+  const juz30Persen = hasil.detailPerJuz[30] || 0;
+  const juz30Jumlah = juz30Persen / 100;
+  return { totalJuz: juz30Jumlah, juz30Persen, surahTersetor: hasil.surahTersetor };
+}
+
+// Konversi rawVal → nilai kuantitas 0-100 sesuai kategori
+// rawVal: untuk IQRA = jumlah surah tersetor, PEMULA = juz30 fraksi, LANJUT = total juz
+function hitungNilaiKuantitasFromRaw(rawVal, siswa) {
+  const kat = getKategori(siswa);
+  if (kat === 'TAHAP_IQRA')     return Math.min(100, Math.max(0, (rawVal / SURAH_TARGET_IQRA.length) * 100));
+  if (kat === 'ALQURAN_PEMULA') return Math.min(100, Math.max(0, rawVal * 100));
+  return hitungNilaiKuantitas(rawVal, siswa?.kelas);
+}
+
+// ═════════════════════════════════════════════════════════════════
 // KEHADIRAN PENGUJI
 // Periode aktif: 27-30 April 2026 (4 hari)
 // Status: HADIR (1 poin), IZIN/SAKIT/TANPA_KETERANGAN (0 poin)
@@ -1324,8 +1387,8 @@ function hitungJuzOtomatis(baris) {
   return { totalJuz, detailPerJuz, surahTersetor };
 }
 
-function hitungNilaiKuantitas(juz, kelas) {
-  const target = getTargetJuz(kelas);
+function hitungNilaiKuantitas(juz, kelas, targetOverride) {
+  const target = targetOverride || getTargetJuz(kelas);
   if (!target) return 0;
   const n = (Number(juz) || 0) / target * 100;
   return Math.min(100, Math.max(0, n));
@@ -1353,7 +1416,7 @@ const STATE = {
     penilaian: [],
     surah: []
   },
-  filter: { kelas: 'all', status: 'all', penguji: 'all' },
+  filter: { kelas: 'all', status: 'all', penguji: 'all', kategori: 'all' },
   kelasArsip: []
 };
 
@@ -1727,7 +1790,7 @@ async function fetchAssignmentForPenguji(pengujiId) {
   const { data, error } = await sb.from('assignment')
     .select(`
       id, status, created_at, siswa_id, penguji_id,
-      siswa:siswa_id (id, nisn, nama, kelas, semester, jenis_kelamin, tahun_ajaran)
+      siswa:siswa_id (id, nisn, nama, kelas, semester, jenis_kelamin, tahun_ajaran, kategori)
     `)
     .eq('penguji_id', pengujiId);
   if (error) throw error;
@@ -1738,7 +1801,7 @@ async function fetchAllAssignment() {
   const { data, error } = await sb.from('assignment')
     .select(`
       id, status, created_at, siswa_id, penguji_id,
-      siswa:siswa_id (id, nisn, nama, kelas, semester),
+      siswa:siswa_id (id, nisn, nama, kelas, semester, kategori),
       penguji:penguji_id (id, nama, username)
     `);
   if (error) throw error;
@@ -1759,7 +1822,7 @@ async function fetchAllPenilaianLengkap() {
   const { data, error } = await sb.from('penilaian')
     .select(`
       *,
-      siswa:siswa_id (id, nisn, nama, kelas, semester),
+      siswa:siswa_id (id, nisn, nama, kelas, semester, kategori),
       penguji:penguji_id (id, nama, username),
       nilai_detail(*)
     `)
@@ -2660,12 +2723,12 @@ async function renderPenilaianList() {
         <span class="bobot-chip">Adab 15%</span>
       </div>
       <div style="font-size:11px;color:var(--primary-dark);margin-bottom:6px;font-weight:600">
-        ▸ Kuantitas (target juz per kelas):
+        ▸ Kuantitas (target per kategori siswa):
       </div>
       <div class="bobot-row">
-        <span class="bobot-chip">Kelas 7 → 2 Juz</span>
-        <span class="bobot-chip">Kelas 8 → 4 Juz</span>
-        <span class="bobot-chip">Kelas 9 → 6 Juz</span>
+        <span class="bobot-chip">📚 Al-Qur'an Lanjut → Kls 7: 2 juz, Kls 8: 4 juz, Kls 9: 6 juz</span>
+        <span class="bobot-chip">📖 Al-Qur'an Pemula → 1 juz (Juz 30)</span>
+        <span class="bobot-chip">🔤 Tahap Iqra' → 22 surah (Ad-Dhuha s.d. An-Nas)</span>
       </div>
     </div>
 
@@ -2723,8 +2786,8 @@ async function renderPenilaianList() {
             <div class="list-name">${escapeHtml(s.nama || '-')}</div>
             <div class="list-meta">
               <span class="badge badge-blue">${escapeHtml(s.kelas || '-')}</span>
+              <span class="${getKategoriInfo(s.kategori).badge} badge">${getKategoriInfo(s.kategori).icon} ${getKategoriInfo(s.kategori).label}</span>
               <span>${escapeHtml(s.semester || '')}</span>
-              <span>NISN ${escapeHtml(s.nisn || '-')}</span>
               ${a.penguji ? `<span class="badge badge-purple">${escapeHtml(a.penguji.nama)}</span>` : ''}
               ${isSelesai
                 ? '<span class="badge badge-green">✓ Selesai</span>'
@@ -2756,7 +2819,7 @@ async function fetchAllAssignmentWithSiswa() {
   const { data, error } = await sb.from('assignment')
     .select(`
       id, status, created_at, siswa_id, penguji_id,
-      siswa:siswa_id (id, nisn, nama, kelas, semester),
+      siswa:siswa_id (id, nisn, nama, kelas, semester, kategori),
       penguji:penguji_id (id, nama, username)
     `)
     .order('created_at', { ascending: false });
@@ -2881,12 +2944,13 @@ function renderFormPenilaian() {
     <!-- Bobot Info -->
     <div class="bobot-info">
       <strong>📏 Sistem Penilaian</strong>
-      <div style="display:flex;gap:8px;margin-bottom:6px">
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:6px">
         <span class="bobot-chip" style="background:#dbeafe;color:#1e40af;font-weight:700">Kualitas 70%</span>
         <span class="bobot-chip" style="background:#fef3c7;color:#854d0e;font-weight:700">Kuantitas 30%</span>
+        <span class="bobot-chip" style="background:white;font-weight:700">${getKategoriInfo(s.kategori).icon} ${getKategoriInfo(s.kategori).label}</span>
       </div>
       <div style="font-size:11px;color:var(--primary-dark);opacity:.85">
-        Target Juz Kelas ${escapeHtml(s.kelas || '-')}: <strong>${getTargetJuz(s.kelas)} juz</strong>
+        Target Kuantitas: <strong>${getTargetKuantitasLabel(s)}</strong>
       </div>
     </div>
 
@@ -2939,14 +3003,14 @@ function renderFormPenilaian() {
       <div id="rataRataBox" style="margin-top:14px"></div>
     </div>
 
-    <!-- KUANTITAS (Jumlah Juz — auto dihitung dari surah yang disetorkan) -->
+    <!-- KUANTITAS (auto dihitung dari surah yang disetorkan, logika per kategori) -->
     <div class="card" style="border-left:4px solid #d97706">
       <div class="card-title" style="color:#854d0e">
         <span class="material-symbols-outlined" style="font-size:15px">menu_book</span>
-        KUANTITAS · Jumlah Juz <span style="font-size:10px;background:#fef3c7;color:#854d0e;padding:2px 8px;border-radius:999px;margin-left:4px">Bobot 30%</span>
+        KUANTITAS <span style="font-size:10px;background:#fef3c7;color:#854d0e;padding:2px 8px;border-radius:999px;margin-left:4px">Bobot 30%</span>
       </div>
       <p class="text-small text-muted" style="margin-bottom:10px">
-        Otomatis dihitung dari surah bernilai ≥ ${AMBANG_SETORAN}. Target kelas ${escapeHtml(s.kelas || '-')}: <strong>${getTargetJuz(s.kelas)} juz</strong>
+        Otomatis dihitung dari surah bernilai ≥ ${AMBANG_SETORAN}. Target: <strong>${getTargetKuantitasLabel(s)}</strong>
       </p>
       ${isAdminUser ? `
         <!-- Admin boleh override manual -->
@@ -2962,10 +3026,18 @@ function renderFormPenilaian() {
         </div>
         <div id="fJuzManualInput" style="${FORM_STATE.juzManualOverride ? '' : 'display:none'}">
           <div class="form-group">
-            <label>Jumlah Juz (manual) <span class="hint">(boleh pecahan, misal 2.5)</span></label>
-            <input type="number" id="fJuz" min="0" max="30" step="0.25" value="${fs.jumlah_juz || ''}"
-                   placeholder="Contoh: 2 atau 2.5"
-                   oninput="updateNilaiKuantitasManual(this.value)">
+            ${getKategori(s) === 'TAHAP_IQRA'
+              ? `<label>Jumlah Surah Tersetor (manual) <span class="hint">(0–${SURAH_TARGET_IQRA.length})</span></label>
+                 <input type="number" id="fJuz" min="0" max="${SURAH_TARGET_IQRA.length}" step="1" value="${fs.jumlah_juz || ''}"
+                        placeholder="Contoh: 15" oninput="updateNilaiKuantitasManual(this.value)">`
+              : getKategori(s) === 'ALQURAN_PEMULA'
+              ? `<label>Jumlah Juz-30 (manual) <span class="hint">(0–1, boleh pecahan)</span></label>
+                 <input type="number" id="fJuz" min="0" max="1" step="0.05" value="${fs.jumlah_juz || ''}"
+                        placeholder="Contoh: 0.75" oninput="updateNilaiKuantitasManual(this.value)">`
+              : `<label>Jumlah Juz (manual) <span class="hint">(boleh pecahan, misal 2.5)</span></label>
+                 <input type="number" id="fJuz" min="0" max="30" step="0.25" value="${fs.jumlah_juz || ''}"
+                        placeholder="Contoh: 2 atau 2.5" oninput="updateNilaiKuantitasManual(this.value)">`
+            }
           </div>
         </div>
       ` : ''}
@@ -3114,41 +3186,92 @@ function updateRataRata() {
 function updateNilaiKuantitas() {
   const box = document.getElementById('kuantitasBox');
   if (!box) return;
+  if (FORM_STATE.juzManualOverride) return renderKuantitasBoxManual();
 
-  // Kalau admin override manual, pakai nilai manual
-  if (FORM_STATE.juzManualOverride) {
-    return renderKuantitasBoxManual();
-  }
-
-  // Auto-hitung dari FORM_STATE.baris
   const baris = FORM_STATE.baris.filter(b => b.surah_nama && b.kelancaran !== '' && b.tajwid !== '' && b.kekuatan_hafalan !== '' && b.adab_tartil !== '');
-  const hasil = hitungJuzOtomatis(baris);
-
-  FORM_STATE.jumlah_juz = Number(hasil.totalJuz.toFixed(4));
+  const siswa = FORM_STATE.siswa;
+  const kat = getKategori(siswa);
 
   if (!baris.length) {
+    FORM_STATE.jumlah_juz = 0;
     box.innerHTML = `
       <div class="alert alert-info" style="background:#fef3c7;color:#854d0e;border-color:#fde68a">
         <span class="material-symbols-outlined" style="font-size:17px">info</span>
-        <span>Isi nilai per surah terlebih dahulu. Surah bernilai ≥ ${AMBANG_SETORAN} otomatis dihitung ke juz.</span>
+        <span>Isi nilai per surah terlebih dahulu. Target: <strong>${getTargetKuantitasLabel(siswa)}</strong></span>
       </div>
     `;
     updateNilaiAkhir();
     return;
   }
 
-  const target = getTargetJuz(FORM_STATE.siswa.kelas);
-  const nilaiKuantitas = hitungNilaiKuantitas(hasil.totalJuz, FORM_STATE.siswa.kelas);
-  const tercapai = hasil.totalJuz >= target;
+  if (kat === 'TAHAP_IQRA') {
+    const hasil = hitungKuantitasIqra(baris);
+    FORM_STATE.jumlah_juz = hasil.count;
+    const nilaiKuantitas = Math.min(100, hasil.persen);
+    const tercapai = hasil.count >= hasil.total;
+    const chips = hasil.setor.map(n =>
+      `<span class="bobot-chip" style="background:white;color:#059669;border:1px solid #05996940;font-weight:700">${escapeHtml(n)}</span>`
+    ).join('');
+    box.innerHTML = `
+      <div class="alert alert-warning" style="background:#fef3c7;color:#854d0e;border-color:#fde68a;display:block">
+        <div class="flex-row" style="margin-bottom:8px">
+          <span class="material-symbols-outlined" style="font-size:17px">${tercapai ? 'verified' : 'calculate'}</span>
+          <div style="flex:1">
+            <div style="font-weight:800;font-size:14px">
+              Auto · ${hasil.count} dari ${hasil.total} surah tersetor
+              ${tercapai
+                ? '<span class="badge" style="margin-left:6px;background:#059669;color:white">✓ Lengkap</span>'
+                : `<span class="badge" style="margin-left:6px;background:#dc2626;color:white">${hasil.persen.toFixed(1)}%</span>`}
+            </div>
+            <div class="text-small">Nilai Kuantitas: <strong>${nilaiKuantitas.toFixed(2)}</strong> · Target: ${hasil.total} surah (Ad-Dhuha s.d. An-Nas)</div>
+          </div>
+        </div>
+        ${hasil.setor.length
+          ? `<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px">${chips}</div>`
+          : `<div class="text-small" style="margin-top:4px;font-style:italic">Belum ada surah Iqra' dengan nilai ≥ ${AMBANG_SETORAN}</div>`}
+      </div>
+    `;
+    updateNilaiAkhir();
+    return;
+  }
 
-  // Detail per juz (hanya yang ada setoran)
-  const juzList = Object.keys(hasil.detailPerJuz).map(Number).sort((a,b) => a - b);
+  if (kat === 'ALQURAN_PEMULA') {
+    const hasil = hitungKuantitasPemula(baris);
+    FORM_STATE.jumlah_juz = Number(hasil.totalJuz.toFixed(4));
+    const nilaiKuantitas = Math.min(100, hasil.totalJuz * 100);
+    const tercapai = hasil.totalJuz >= 1;
+    box.innerHTML = `
+      <div class="alert alert-warning" style="background:#fef3c7;color:#854d0e;border-color:#fde68a;display:block">
+        <div class="flex-row" style="margin-bottom:8px">
+          <span class="material-symbols-outlined" style="font-size:17px">${tercapai ? 'verified' : 'calculate'}</span>
+          <div style="flex:1">
+            <div style="font-weight:800;font-size:14px">
+              Auto · Juz 30: ${hasil.juz30Persen.toFixed(1)}% (${hasil.totalJuz.toFixed(2)} juz)
+              ${tercapai
+                ? '<span class="badge" style="margin-left:6px;background:#059669;color:white">✓ Target Tercapai</span>'
+                : `<span class="badge" style="margin-left:6px;background:#dc2626;color:white">${(hasil.totalJuz*100).toFixed(1)}% target</span>`}
+            </div>
+            <div class="text-small">Nilai Kuantitas: <strong>${nilaiKuantitas.toFixed(2)}</strong> · Target: 1 juz (Juz 30)</div>
+          </div>
+        </div>
+      </div>
+    `;
+    updateNilaiAkhir();
+    return;
+  }
+
+  // ALQURAN_LANJUT (existing behavior)
+  const hasil = hitungJuzOtomatis(baris);
+  FORM_STATE.jumlah_juz = Number(hasil.totalJuz.toFixed(4));
+  const target = getTargetJuz(siswa.kelas);
+  const nilaiKuantitas = hitungNilaiKuantitas(hasil.totalJuz, siswa.kelas);
+  const tercapai = hasil.totalJuz >= target;
+  const juzList = Object.keys(hasil.detailPerJuz).map(Number).sort((a,b) => a-b);
   const juzChips = juzList.map(j => {
     const p = hasil.detailPerJuz[j];
-    const warna = p >= 100 ? '#059669' : p >= 50 ? '#d97706' : '#dc2626';
-    return `<span class="bobot-chip" style="background:white;color:${warna};border:1px solid ${warna}40;font-weight:700">Juz ${j}: ${p.toFixed(1)}%</span>`;
+    const w = p >= 100 ? '#059669' : p >= 50 ? '#d97706' : '#dc2626';
+    return `<span class="bobot-chip" style="background:white;color:${w};border:1px solid ${w}40;font-weight:700">Juz ${j}: ${p.toFixed(1)}%</span>`;
   }).join('');
-
   box.innerHTML = `
     <div class="alert alert-warning" style="background:#fef3c7;color:#854d0e;border-color:#fde68a;display:block">
       <div class="flex-row" style="margin-bottom:8px">
@@ -3160,16 +3283,12 @@ function updateNilaiKuantitas() {
               ? '<span class="badge" style="margin-left:6px;background:#059669;color:white">✓ Target Tercapai</span>'
               : `<span class="badge" style="margin-left:6px;background:#dc2626;color:white">${(hasil.totalJuz/target*100).toFixed(1)}% target</span>`}
           </div>
-          <div class="text-small">
-            Nilai Kuantitas: <strong>${nilaiKuantitas.toFixed(2)}</strong> · Target kelas ${escapeHtml(FORM_STATE.siswa.kelas || '-')}: ${target} juz
-          </div>
+          <div class="text-small">Nilai Kuantitas: <strong>${nilaiKuantitas.toFixed(2)}</strong> · Target kelas ${escapeHtml(siswa.kelas || '-')}: ${target} juz</div>
         </div>
       </div>
-      ${juzList.length ? `
-        <div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px">
-          ${juzChips}
-        </div>
-      ` : `<div class="text-small" style="margin-top:4px;font-style:italic">Belum ada surah dengan nilai ≥ ${AMBANG_SETORAN}</div>`}
+      ${juzList.length
+        ? `<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px">${juzChips}</div>`
+        : `<div class="text-small" style="margin-top:4px;font-style:italic">Belum ada surah dengan nilai ≥ ${AMBANG_SETORAN}</div>`}
     </div>
   `;
   updateNilaiAkhir();
@@ -3180,32 +3299,47 @@ function renderKuantitasBoxManual() {
   const box = document.getElementById('kuantitasBox');
   if (!box) return;
   const val = FORM_STATE.jumlah_juz;
+  const siswa = FORM_STATE.siswa;
+  const kat = getKategori(siswa);
   if (val === '' || val === null || isNaN(Number(val))) {
     box.innerHTML = `
       <div class="alert alert-info" style="background:#fef3c7;color:#854d0e;border-color:#fde68a">
         <span class="material-symbols-outlined" style="font-size:17px">edit</span>
-        <span>Mode override manual aktif. Isi jumlah juz di atas.</span>
+        <span>Mode override manual aktif. Isi nilai di atas.</span>
       </div>
     `;
     updateNilaiAkhir();
     return;
   }
-  const juz = Number(val);
-  const target = getTargetJuz(FORM_STATE.siswa.kelas);
-  const nilai = hitungNilaiKuantitas(juz, FORM_STATE.siswa.kelas);
-  const tercapai = juz >= target;
+  const rawVal = Number(val);
+  const nilai = hitungNilaiKuantitasFromRaw(rawVal, siswa);
+  let labelTarget, labelVal, tercapai;
+  if (kat === 'TAHAP_IQRA') {
+    labelTarget = `${SURAH_TARGET_IQRA.length} surah`;
+    labelVal = `${rawVal} surah`;
+    tercapai = rawVal >= SURAH_TARGET_IQRA.length;
+  } else if (kat === 'ALQURAN_PEMULA') {
+    labelTarget = '1 juz (Juz 30)';
+    labelVal = `${rawVal} juz`;
+    tercapai = rawVal >= 1;
+  } else {
+    const target = getTargetJuz(siswa.kelas);
+    labelTarget = `${target} juz (kelas ${siswa.kelas || '-'})`;
+    labelVal = `${rawVal} juz`;
+    tercapai = rawVal >= target;
+  }
   box.innerHTML = `
     <div class="alert alert-warning" style="background:#fef3c7;color:#854d0e;border-color:#fde68a">
       <span class="material-symbols-outlined" style="font-size:17px">${tercapai ? 'verified' : 'edit'}</span>
       <div style="flex:1">
         <div style="font-weight:800;font-size:14px;margin-bottom:4px">
-          Manual · ${juz} juz
+          Manual · ${labelVal}
           ${tercapai
             ? '<span class="badge" style="margin-left:6px;background:#059669;color:white">✓ Target Tercapai</span>'
             : '<span class="badge" style="margin-left:6px;background:#dc2626;color:white">Belum Tercapai</span>'}
         </div>
         <div class="text-small">
-          Nilai Kuantitas: <strong>${nilai.toFixed(2)}</strong> · ${(juz/target*100).toFixed(1)}% dari target kelas
+          Nilai Kuantitas: <strong>${nilai.toFixed(2)}</strong> · Target: ${labelTarget}
         </div>
       </div>
     </div>
@@ -3253,7 +3387,7 @@ function updateNilaiAkhir() {
     ? baris.map(b => hitungTotal(b)).reduce((a,b)=>a+b,0) / baris.length
     : 0;
   const kuantitas = adaKuantitas
-    ? hitungNilaiKuantitas(Number(juzVal), FORM_STATE.siswa.kelas)
+    ? hitungNilaiKuantitasFromRaw(Number(juzVal), FORM_STATE.siswa)
     : 0;
   const akhir = hitungNilaiAkhir(kualitas, kuantitas);
 
@@ -3303,24 +3437,39 @@ async function simpanPenilaian() {
     }
   }
 
-  // Tentukan jumlah juz: manual (admin override) atau otomatis dari kualitas
-  let juz;
+  // Tentukan jumlah juz/surah dan kuantitas
+  const siswa = FORM_STATE.siswa;
+  const kat = getKategori(siswa);
+  let juz, kuantitas;
+
   if (FORM_STATE.juzManualOverride) {
     const juzInput = document.getElementById('fJuz');
     const juzVal = juzInput ? juzInput.value : '';
     if (juzVal === '' || isNaN(Number(juzVal))) {
-      showToast('⚠️ Isi jumlah juz manual atau nonaktifkan override');
+      showToast('⚠️ Isi nilai manual atau nonaktifkan override');
       return;
     }
     juz = Number(juzVal);
-    if (juz < 0 || juz > 30) {
-      showToast('⚠️ Jumlah juz harus 0–30');
+    const maxVal = kat === 'TAHAP_IQRA' ? SURAH_TARGET_IQRA.length : kat === 'ALQURAN_PEMULA' ? 1 : 30;
+    if (juz < 0 || juz > maxVal) {
+      showToast(`⚠️ Nilai harus 0–${maxVal}`);
       return;
     }
+    kuantitas = hitungNilaiKuantitasFromRaw(juz, siswa);
   } else {
-    // Auto-hitung dari baris nilai surah
-    const hasil = hitungJuzOtomatis(validBaris);
-    juz = Number(hasil.totalJuz.toFixed(4));
+    if (kat === 'TAHAP_IQRA') {
+      const hasil = hitungKuantitasIqra(validBaris);
+      juz = hasil.count;
+      kuantitas = Math.min(100, hasil.persen);
+    } else if (kat === 'ALQURAN_PEMULA') {
+      const hasil = hitungKuantitasPemula(validBaris);
+      juz = Number(hasil.totalJuz.toFixed(4));
+      kuantitas = Math.min(100, hasil.totalJuz * 100);
+    } else {
+      const hasil = hitungJuzOtomatis(validBaris);
+      juz = Number(hasil.totalJuz.toFixed(4));
+      kuantitas = hitungNilaiKuantitas(juz, siswa.kelas);
+    }
   }
 
   const tanggal = document.getElementById('fTanggal').value;
@@ -3329,7 +3478,6 @@ async function simpanPenilaian() {
   // Hitung nilai
   const totals = validBaris.map(b => hitungTotal(b));
   const kualitas = totals.reduce((a,b)=>a+b,0) / totals.length;
-  const kuantitas = hitungNilaiKuantitas(juz, FORM_STATE.siswa.kelas);
   const akhir = hitungNilaiAkhir(kualitas, kuantitas);
 
   showLoading('Menyimpan...');
@@ -3465,10 +3613,13 @@ async function renderRekap() {
     const kelasSet = [...new Set(data.map(p => p.siswa?.kelas).filter(k => k && !STATE.kelasArsip.includes(k)))].sort();
     const pengujiSet = canSeeAll ? [...new Set(data.map(p => p.penguji?.nama).filter(Boolean))].sort() : [];
 
+    if (!STATE.filter.kategori) STATE.filter.kategori = 'all';
+
     let filtered = data.filter(p => {
       if (STATE.kelasArsip.includes(p.siswa?.kelas)) return false;
       if (STATE.filter.kelas !== 'all' && p.siswa?.kelas !== STATE.filter.kelas) return false;
       if (canSeeAll && STATE.filter.penguji !== 'all' && p.penguji?.nama !== STATE.filter.penguji) return false;
+      if (STATE.filter.kategori !== 'all' && getKategori(p.siswa) !== STATE.filter.kategori) return false;
       return true;
     });
 
@@ -3479,10 +3630,15 @@ async function renderRekap() {
     const min = nilaiAkhir.length ? Math.min(...nilaiAkhir) : 0;
 
     document.getElementById('rekapBody').innerHTML = `
-      <!-- Filter -->
+      <!-- Filter Kelas -->
       <div class="filter-bar">
         <button class="filter-chip ${STATE.filter.kelas === 'all' ? 'active' : ''}" onclick="STATE.filter.kelas='all'; renderRekap()">Semua Kelas</button>
         ${kelasSet.map(k => `<button class="filter-chip ${STATE.filter.kelas === k ? 'active' : ''}" onclick="STATE.filter.kelas='${escapeHtml(k)}'; renderRekap()">${escapeHtml(k)}</button>`).join('')}
+      </div>
+      <!-- Filter Kategori -->
+      <div class="filter-bar">
+        <button class="filter-chip ${STATE.filter.kategori === 'all' ? 'active' : ''}" onclick="STATE.filter.kategori='all'; renderRekap()">Semua Kategori</button>
+        ${KATEGORI_LIST.map(k => `<button class="filter-chip ${STATE.filter.kategori === k.value ? 'active' : ''}" onclick="STATE.filter.kategori='${k.value}'; renderRekap()">${k.icon} ${k.label}</button>`).join('')}
       </div>
       ${pengujiSet.length > 1 ? `
       <div class="filter-bar">
@@ -3521,6 +3677,11 @@ async function renderRekap() {
           const s = p.siswa || {};
           const pg = p.penguji || {};
           const na = Number(p.nilai_akhir) || 0;
+          const katInfo = getKategoriInfo(s.kategori);
+          const kat = getKategori(s);
+          const kuantLabel = kat === 'TAHAP_IQRA'
+            ? `${Number(p.jumlah_juz||0)} surah`
+            : `${Number(p.jumlah_juz||0).toFixed(2)} juz`;
           return `
             <div class="list-item" onclick="detailRekap('${p.id}')" style="cursor:pointer">
               <div class="list-avatar" style="background:${warnaNilai(na)};color:white">${Math.round(na)}</div>
@@ -3528,8 +3689,9 @@ async function renderRekap() {
                 <div class="list-name">${escapeHtml(s.nama || '-')}</div>
                 <div class="list-meta">
                   <span class="badge badge-blue">${escapeHtml(s.kelas || '-')}</span>
+                  <span class="${katInfo.badge} badge">${katInfo.icon} ${katInfo.label}</span>
                   <span class="badge badge-purple">${escapeHtml(pg.nama || '-')}</span>
-                  <span>${p.nilai_detail?.length || 0} surah · ${Number(p.jumlah_juz || 0)} juz</span>
+                  <span>${p.nilai_detail?.length || 0} surah · ${kuantLabel}</span>
                   <span class="badge" style="background:${warnaNilai(na)}20;color:${warnaNilai(na)}">${predikat(na)}</span>
                 </div>
               </div>
@@ -3619,7 +3781,13 @@ async function detailRekap(penilaianId) {
             <span class="badge" style="background:#854d0e;color:white;margin-left:4px">×30% = ${(Number(data.nilai_kuantitas || 0)*0.3).toFixed(2)}</span>
           </div>
           <div class="text-small">
-            ${Number(data.jumlah_juz || 0)} dari ${getTargetJuz(s.kelas)} juz target (kelas ${escapeHtml(s.kelas || '-')})
+            ${(() => {
+              const kat = getKategori(s);
+              const raw = Number(data.jumlah_juz || 0);
+              if (kat === 'TAHAP_IQRA')     return `${raw} dari ${SURAH_TARGET_IQRA.length} surah target (Ad-Dhuha s.d. An-Nas)`;
+              if (kat === 'ALQURAN_PEMULA') return `${raw.toFixed(2)} dari 1 juz target (Juz 30)`;
+              return `${raw.toFixed(2)} dari ${getTargetJuz(s.kelas)} juz target (kelas ${escapeHtml(s.kelas || '-')})`;
+            })()}
           </div>
         </div>
       </div>
@@ -3653,22 +3821,26 @@ function exportRekapExcel() {
 
   // Sheet 1: Rekap (satu baris per siswa)
   const sheet1 = [
-    ['NO','NISN','NAMA SISWA','KELAS','SEMESTER','PENGUJI','TANGGAL','JUMLAH SURAH','JUMLAH JUZ','TARGET JUZ','NILAI KUALITAS (70%)','NILAI KUANTITAS (30%)','NILAI AKHIR','PREDIKAT','CATATAN']
+    ['NO','NISN','NAMA SISWA','KELAS','KATEGORI','SEMESTER','PENGUJI','TANGGAL','JUMLAH SURAH','KUANTITAS RAW','TARGET KUANTITAS','NILAI KUALITAS (70%)','NILAI KUANTITAS (30%)','NILAI AKHIR','PREDIKAT','CATATAN']
   ];
   data.forEach((p, i) => {
     const s = p.siswa || {};
-    const targetJuz = getTargetJuz(s.kelas);
+    const kat = getKategori(s);
+    const katInfo = getKategoriInfo(s.kategori);
+    const raw = Number(p.jumlah_juz || 0);
+    const targetLabel = getTargetKuantitasLabel(s);
     sheet1.push([
       i+1,
       s.nisn || '',
       s.nama || '',
       s.kelas || '',
+      katInfo.label,
       s.semester || '',
       p.penguji?.nama || '',
       p.tanggal_ujian || '',
       (p.nilai_detail||[]).length,
-      Number(p.jumlah_juz || 0),
-      targetJuz,
+      kat === 'TAHAP_IQRA' ? `${raw} surah` : `${raw} juz`,
+      targetLabel,
       Number(p.nilai_kualitas || 0).toFixed(2),
       Number(p.nilai_kuantitas || 0).toFixed(2),
       Number(p.nilai_akhir).toFixed(2),
@@ -4056,6 +4228,24 @@ async function renderAdminLembagaOnly() {
 // Tab Sistem: koneksi database + zona berbahaya
 function renderTabSistem() {
   document.getElementById('pengaturanTabBody').innerHTML = `
+    <div class="card" style="border-color:rgba(37,99,235,0.3)">
+      <div class="card-title">
+        <span class="material-symbols-outlined" style="font-size:15px">build</span>
+        Migrasi Database — Kolom Kategori
+      </div>
+      <p class="text-small text-muted" style="margin-bottom:8px">
+        Jalankan SQL berikut di <strong>Supabase → SQL Editor</strong> agar fitur Kategori Siswa aktif:
+      </p>
+      <pre style="background:#f1f5f9;padding:10px;border-radius:8px;font-size:11px;overflow-x:auto;line-height:1.6;color:#0f172a">ALTER TABLE siswa
+ADD COLUMN IF NOT EXISTS kategori TEXT
+DEFAULT 'ALQURAN_LANJUT'
+CHECK (kategori IN ('ALQURAN_LANJUT','ALQURAN_PEMULA','TAHAP_IQRA'));
+
+UPDATE siswa SET kategori = 'ALQURAN_LANJUT' WHERE kategori IS NULL;</pre>
+      <button class="btn btn-accent btn-sm btn-full" style="margin-top:8px" onclick="navigator.clipboard.writeText(\`ALTER TABLE siswa\nADD COLUMN IF NOT EXISTS kategori TEXT\nDEFAULT 'ALQURAN_LANJUT'\nCHECK (kategori IN ('ALQURAN_LANJUT','ALQURAN_PEMULA','TAHAP_IQRA'));\n\nUPDATE siswa SET kategori = 'ALQURAN_LANJUT' WHERE kategori IS NULL;\`).then(()=>showToast('✅ SQL disalin'))">
+        <span class="material-symbols-outlined" style="font-size:14px">content_copy</span> Salin SQL
+      </button>
+    </div>
     <div class="card">
       <div class="card-title">
         <span class="material-symbols-outlined" style="font-size:15px">database</span>
@@ -4140,6 +4330,9 @@ async function renderAdminSiswa() {
             <span class="material-symbols-outlined" style="font-size:14px">table_view</span> Export
           </button>
         </div>
+        <button class="btn btn-accent btn-full btn-sm" onclick="openBulkSetKategori()" style="margin-bottom:10px">
+          <span class="material-symbols-outlined" style="font-size:14px">category</span> Atur Kategori Massal
+        </button>
         <input type="file" id="importSiswaExcel" accept=".xlsx,.xls" style="display:none" onchange="handleImportSiswaExcel(event)">
 
         <input type="text" id="searchSiswa" placeholder="🔍 Cari nama / NISN..." oninput="filterSiswa(this.value)">
@@ -4156,21 +4349,24 @@ async function renderAdminSiswa() {
   }
 }
 
-function renderSiswaListHtml(siswa) {
+function renderSiswaListHtml(siswa, bulkMode = false) {
   if (!siswa.length) {
     return '<div class="empty-state"><div class="empty-icon">👤</div><p>Belum ada data siswa.</p></div>';
   }
-  return siswa.map(s => `
-    <div class="list-item">
-      <div class="list-avatar">${escapeHtml((s.nama||'?').charAt(0).toUpperCase())}</div>
+  return siswa.map(s => {
+    const katInfo = getKategoriInfo(s.kategori);
+    return `
+    <div class="list-item" style="${bulkMode ? 'cursor:pointer' : ''}" ${bulkMode ? `onclick="toggleSiswaCheck('${s.id}')"` : ''}>
+      ${bulkMode ? `<input type="checkbox" id="chk_${s.id}" class="siswa-chk" value="${s.id}" onclick="event.stopPropagation();toggleSiswaCheck('${s.id}')" style="width:18px;height:18px;accent-color:var(--primary);flex-shrink:0;cursor:pointer">` : `<div class="list-avatar">${escapeHtml((s.nama||'?').charAt(0).toUpperCase())}</div>`}
       <div class="list-info">
         <div class="list-name">${escapeHtml(s.nama)}</div>
         <div class="list-meta">
           <span class="badge badge-blue">${escapeHtml(s.kelas || '-')}</span>
-          <span>${escapeHtml(s.semester || '')}</span>
+          <span class="${katInfo.badge} badge">${katInfo.icon} ${katInfo.label}</span>
           <span>NISN ${escapeHtml(s.nisn || '-')}</span>
         </div>
       </div>
+      ${!bulkMode ? `
       <div class="list-actions">
         <button class="btn-icon" onclick='openFormSiswa(${JSON.stringify(s).replace(/'/g,"&apos;")})' title="Edit">
           <span class="material-symbols-outlined" style="font-size:15px">edit</span>
@@ -4178,9 +4374,9 @@ function renderSiswaListHtml(siswa) {
         <button class="btn-icon danger" onclick="deleteSiswa('${s.id}')" title="Hapus">
           <span class="material-symbols-outlined" style="font-size:15px">delete</span>
         </button>
-      </div>
+      </div>` : ''}
     </div>
-  `).join('');
+  `}).join('');
 }
 
 function filterSiswa(q) {
@@ -4189,13 +4385,14 @@ function filterSiswa(q) {
   const filtered = !needle ? all : all.filter(s =>
     (s.nama||'').toLowerCase().includes(needle) ||
     (s.nisn||'').toLowerCase().includes(needle) ||
-    (s.kelas||'').toLowerCase().includes(needle)
+    (s.kelas||'').toLowerCase().includes(needle) ||
+    (getKategoriInfo(s.kategori).label).toLowerCase().includes(needle)
   );
   document.getElementById('siswaList').innerHTML = renderSiswaListHtml(filtered);
 }
 
 function openFormSiswa(existing = null) {
-  const s = existing || { nisn:'', nama:'', kelas:'', semester:'', jenis_kelamin:'', tahun_ajaran: STATE.lembaga.tahun_ajaran };
+  const s = existing || { nisn:'', nama:'', kelas:'', semester:'', jenis_kelamin:'', tahun_ajaran: STATE.lembaga.tahun_ajaran, kategori: 'ALQURAN_LANJUT' };
   showModal(`
     <div class="modal-header">
       <h3>${existing ? 'Edit Siswa' : 'Tambah Siswa'}</h3>
@@ -4234,6 +4431,12 @@ function openFormSiswa(existing = null) {
       </div>
     </div>
     <div class="form-group">
+      <label>Kategori <span class="req">*</span></label>
+      <select id="sfKategori">
+        ${KATEGORI_LIST.map(k => `<option value="${k.value}" ${(s.kategori || 'ALQURAN_LANJUT') === k.value ? 'selected' : ''}>${k.icon} ${k.label}</option>`).join('')}
+      </select>
+    </div>
+    <div class="form-group">
       <label>Tahun Ajaran</label>
       <input type="text" id="sfTA" value="${escapeHtml(s.tahun_ajaran || '')}" placeholder="2025/2026">
     </div>
@@ -4252,7 +4455,8 @@ async function submitSiswa(id) {
     kelas: document.getElementById('sfKelas').value.trim(),
     semester: document.getElementById('sfSmt').value,
     jenis_kelamin: document.getElementById('sfJK').value,
-    tahun_ajaran: document.getElementById('sfTA').value.trim()
+    tahun_ajaran: document.getElementById('sfTA').value.trim(),
+    kategori: document.getElementById('sfKategori').value
   };
   if (!payload.nama) return showToast('⚠️ Nama wajib');
   if (!payload.nisn) return showToast('⚠️ NISN wajib');
@@ -4261,12 +4465,18 @@ async function submitSiswa(id) {
 
   showLoading('Menyimpan...');
   try {
+    let siswaId = id;
     if (id) {
       const { error } = await sb.from('siswa').update(payload).eq('id', id);
       if (error) throw error;
     } else {
-      const { error } = await sb.from('siswa').insert(payload);
+      const { data: newS, error } = await sb.from('siswa').insert(payload).select().single();
       if (error) throw error;
+      siswaId = newS.id;
+    }
+    // Recalculate penilaian if kategori changed
+    if (id && payload.kategori) {
+      await recalcPenilaianForSiswa(id, payload);
     }
     hideLoading();
     closeModal();
@@ -4301,14 +4511,23 @@ function deleteSiswa(id) {
 
 function downloadTemplateSiswa() {
   const data = [
-    ['nama','nisn','kelas','semester','jenis_kelamin','tahun_ajaran'],
-    ['Ahmad Fulan','1234567890','7A','Ganjil','L','2025/2026'],
-    ['Siti Aisyah','0987654321','7B','Ganjil','P','2025/2026']
+    ['nama','nisn','kelas','semester','jenis_kelamin','tahun_ajaran','kategori'],
+    ['Ahmad Fulan','1234567890','7A','Ganjil','L','2025/2026','ALQURAN_LANJUT'],
+    ['Siti Aisyah','0987654321','7B','Ganjil','P','2025/2026','ALQURAN_PEMULA'],
+    ['Budi Santoso','1122334455','7C','Ganjil','L','2025/2026','TAHAP_IQRA']
   ];
   const wb = XLSX.utils.book_new();
   const ws = XLSX.utils.aoa_to_sheet(data);
-  ws['!cols'] = [{wch:22},{wch:14},{wch:10},{wch:10},{wch:12},{wch:12}];
+  ws['!cols'] = [{wch:22},{wch:14},{wch:10},{wch:10},{wch:12},{wch:12},{wch:16}];
+  // Catatan nilai kategori yang valid
+  const ws2 = XLSX.utils.aoa_to_sheet([
+    ['NILAI KATEGORI YANG VALID'],
+    ['ALQURAN_LANJUT',"Al-Qur'an Lanjut (target juz per kelas: kelas 7=2juz, 8=4juz, 9=6juz)"],
+    ['ALQURAN_PEMULA',"Al-Qur'an Pemula (target 1 juz, yaitu Juz 30)"],
+    ['TAHAP_IQRA',"Tahap Iqra' (target 22 surah: Ad-Dhuha s.d. An-Nas)"]
+  ]);
   XLSX.utils.book_append_sheet(wb, ws, 'Siswa');
+  XLSX.utils.book_append_sheet(wb, ws2, 'Panduan Kategori');
   XLSX.writeFile(wb, 'Template_Import_Siswa.xlsx');
   showToast('✅ Template diunduh');
 }
@@ -4316,14 +4535,14 @@ function downloadTemplateSiswa() {
 function exportSiswaExcel() {
   const siswa = window._siswaCache || [];
   const data = [
-    ['NO','NAMA','NISN','KELAS','SEMESTER','JENIS KELAMIN','TAHUN AJARAN']
+    ['NO','NAMA','NISN','KELAS','KATEGORI','SEMESTER','JENIS KELAMIN','TAHUN AJARAN']
   ];
   siswa.forEach((s,i) => {
-    data.push([i+1, s.nama, s.nisn, s.kelas, s.semester, s.jenis_kelamin, s.tahun_ajaran]);
+    data.push([i+1, s.nama, s.nisn, s.kelas, getKategoriInfo(s.kategori).label, s.semester, s.jenis_kelamin, s.tahun_ajaran]);
   });
   const wb = XLSX.utils.book_new();
   const ws = XLSX.utils.aoa_to_sheet(data);
-  ws['!cols'] = [{wch:4},{wch:22},{wch:14},{wch:10},{wch:10},{wch:12},{wch:12}];
+  ws['!cols'] = [{wch:4},{wch:22},{wch:14},{wch:10},{wch:16},{wch:10},{wch:12},{wch:12}];
   XLSX.utils.book_append_sheet(wb, ws, 'Siswa');
   XLSX.writeFile(wb, `Data_Siswa_${new Date().toISOString().slice(0,10)}.xlsx`);
   showToast('✅ Data diekspor');
@@ -4350,22 +4569,27 @@ function handleImportSiswaExcel(e) {
       const iSmt = findIdx('semester','smt');
       const iJK = findIdx('jenis_kelamin','jk','kelamin','jenis kelamin');
       const iTA = findIdx('tahun_ajaran','ta','tahun ajaran');
+      const iKat = findIdx('kategori','category','kategory');
       if (iNama === -1 || iKelas === -1) {
         showToast('❌ Kolom "nama" & "kelas" tidak ditemukan');
         return;
       }
 
+      const VALID_KATEGORI = KATEGORI_LIST.map(k => k.value);
       const toInsert = [];
       for (let r = 1; r < rows.length; r++) {
         const row = rows[r];
         if (!row[iNama]) continue;
+        let katRaw = iKat >= 0 ? String(row[iKat]||'').trim().toUpperCase() : '';
+        if (!VALID_KATEGORI.includes(katRaw)) katRaw = 'ALQURAN_LANJUT';
         toInsert.push({
           nama: String(row[iNama]).trim(),
           nisn: iNisn >= 0 ? String(row[iNisn]||'').trim() : '',
           kelas: String(row[iKelas]||'').trim(),
           semester: iSmt >= 0 ? String(row[iSmt]||'').trim() : 'Ganjil',
           jenis_kelamin: iJK >= 0 ? String(row[iJK]||'').trim().toUpperCase().charAt(0) : '',
-          tahun_ajaran: iTA >= 0 ? String(row[iTA]||'').trim() : STATE.lembaga.tahun_ajaran
+          tahun_ajaran: iTA >= 0 ? String(row[iTA]||'').trim() : STATE.lembaga.tahun_ajaran,
+          kategori: katRaw
         });
       }
 
@@ -6214,6 +6438,150 @@ function shakeElement(el) {
   void el.offsetWidth;
   el.style.animation = 'shake 0.4s ease';
   setTimeout(() => { el.style.animation = ''; }, 400);
+}
+
+// ═════════════════════════════════════════════════════════════════
+// RECALC PENILAIAN SAAT KATEGORI BERUBAH
+// ═════════════════════════════════════════════════════════════════
+async function recalcPenilaianForSiswa(siswaId, siswa) {
+  const { data: list, error } = await sb.from('penilaian')
+    .select('*, nilai_detail(*)')
+    .eq('siswa_id', siswaId);
+  if (error) throw error;
+  if (!list || !list.length) return 0;
+
+  for (const pen of list) {
+    const details = (pen.nilai_detail || []).filter(d => d.surah_nama);
+    if (!details.length) continue;
+
+    const totals = details.map(b => hitungTotal(b));
+    const kualitas = totals.reduce((a,b) => a+b, 0) / totals.length;
+
+    const kat = getKategori(siswa);
+    let juz, kuantitas;
+    if (kat === 'TAHAP_IQRA') {
+      const hasil = hitungKuantitasIqra(details);
+      juz = hasil.count;
+      kuantitas = Math.min(100, hasil.persen);
+    } else if (kat === 'ALQURAN_PEMULA') {
+      const hasil = hitungKuantitasPemula(details);
+      juz = Number(hasil.totalJuz.toFixed(4));
+      kuantitas = Math.min(100, hasil.totalJuz * 100);
+    } else {
+      const hasil = hitungJuzOtomatis(details);
+      juz = Number(hasil.totalJuz.toFixed(4));
+      kuantitas = hitungNilaiKuantitas(juz, siswa.kelas);
+    }
+    const akhir = hitungNilaiAkhir(kualitas, kuantitas);
+
+    await sb.from('penilaian').update({
+      jumlah_juz: juz,
+      nilai_kuantitas: kuantitas,
+      nilai_akhir: akhir,
+      updated_at: new Date().toISOString()
+    }).eq('id', pen.id);
+  }
+  return list.length;
+}
+
+// ═════════════════════════════════════════════════════════════════
+// BULK SET KATEGORI
+// ═════════════════════════════════════════════════════════════════
+let _bulkMode = false;
+
+function openBulkSetKategori() {
+  const siswa = window._siswaCache || [];
+  if (!siswa.length) { showToast('⚠️ Tidak ada data siswa'); return; }
+
+  _bulkMode = true;
+  const body = getTabBodyEl();
+  const listEl = body.querySelector('#siswaList');
+  if (!listEl) return;
+
+  // Ganti tombol "Atur Kategori Massal" menjadi panel konfirmasi
+  const bulkBtn = body.querySelector('[onclick="openBulkSetKategori()"]');
+  if (bulkBtn) {
+    bulkBtn.outerHTML = `
+      <div id="bulkKategoriPanel" class="card" style="margin-bottom:10px;border:2px solid var(--primary)">
+        <div class="card-title"><span class="material-symbols-outlined" style="font-size:15px">category</span> Atur Kategori Massal</div>
+        <p class="text-small text-muted" style="margin-bottom:10px">Centang siswa yang ingin diubah kategorinya, lalu pilih kategori dan klik Terapkan.</p>
+        <div class="form-group">
+          <label>Pilih Kategori</label>
+          <select id="bulkKatSelect">
+            ${KATEGORI_LIST.map(k => `<option value="${k.value}">${k.icon} ${k.label}</option>`).join('')}
+          </select>
+        </div>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-outline btn-sm" style="flex:1" onclick="cancelBulkSetKategori()">Batal</button>
+          <button class="btn btn-primary btn-sm" style="flex:1" onclick="applyBulkSetKategori()">
+            <span class="material-symbols-outlined" style="font-size:14px">check</span> Terapkan
+          </button>
+        </div>
+        <div style="margin-top:8px;display:flex;gap:6px">
+          <button class="btn btn-accent btn-sm" onclick="selectAllSiswa(true)">Pilih Semua</button>
+          <button class="btn btn-outline btn-sm" onclick="selectAllSiswa(false)">Batal Semua</button>
+        </div>
+      </div>
+    `;
+  }
+  // Re-render list dengan checkbox
+  listEl.innerHTML = renderSiswaListHtml(siswa, true);
+}
+
+function cancelBulkSetKategori() {
+  _bulkMode = false;
+  renderAdminSiswa();
+}
+
+function toggleSiswaCheck(id) {
+  const chk = document.getElementById('chk_' + id);
+  if (chk) chk.checked = !chk.checked;
+}
+
+function selectAllSiswa(select) {
+  document.querySelectorAll('.siswa-chk').forEach(c => { c.checked = select; });
+}
+
+async function applyBulkSetKategori() {
+  const kategori = document.getElementById('bulkKatSelect')?.value;
+  if (!kategori) return showToast('⚠️ Pilih kategori terlebih dahulu');
+
+  const checked = [...document.querySelectorAll('.siswa-chk:checked')].map(c => c.value);
+  if (!checked.length) return showToast('⚠️ Tidak ada siswa yang dipilih');
+
+  const katLabel = getKategoriInfo(kategori).label;
+  showConfirm(
+    'Atur Kategori Massal',
+    `Ubah kategori ${checked.length} siswa menjadi "${katLabel}"? Penilaian yang sudah ada akan dihitung ulang.`,
+    async () => {
+      showLoading(`Memproses ${checked.length} siswa...`);
+      try {
+        // Update kategori semua siswa terpilih
+        const { error } = await sb.from('siswa')
+          .update({ kategori })
+          .in('id', checked);
+        if (error) throw error;
+
+        // Recalc penilaian untuk setiap siswa
+        const allSiswa = window._siswaCache || [];
+        let recalcCount = 0;
+        for (const siswaId of checked) {
+          const siswa = allSiswa.find(s => s.id === siswaId);
+          const siswaWithKat = { ...siswa, kategori };
+          recalcCount += await recalcPenilaianForSiswa(siswaId, siswaWithKat);
+        }
+
+        hideLoading();
+        _bulkMode = false;
+        showToast(`✅ ${checked.length} siswa diperbarui · ${recalcCount} penilaian dihitung ulang`);
+        renderAdminSiswa();
+      } catch (e) {
+        hideLoading();
+        showToast('❌ ' + e.message);
+      }
+    },
+    '🔄', 'Terapkan', 'btn-primary'
+  );
 }
 
 // ═════════════════════════════════════════════════════════════════
