@@ -3014,7 +3014,7 @@ function renderFormPenilaian() {
         KUANTITAS <span style="font-size:10px;background:#fef3c7;color:#854d0e;padding:2px 8px;border-radius:999px;margin-left:4px">Bobot 30%</span>
       </div>
       <p class="text-small text-muted" style="margin-bottom:10px">
-        Otomatis dihitung dari surah bernilai ≥ <strong>${getAmbangSetoran(getKategori(s))}</strong>. Target: <strong>${getTargetKuantitasLabel(s)}</strong>
+        Target: <strong>${getTargetKuantitasLabel(s)}</strong>
       </p>
       ${isAdminUser ? `
         <!-- Admin boleh override manual -->
@@ -3201,7 +3201,7 @@ function updateNilaiKuantitas() {
     box.innerHTML = `
       <div class="alert alert-info" style="background:#fef3c7;color:#854d0e;border-color:#fde68a">
         <span class="material-symbols-outlined" style="font-size:17px">info</span>
-        <span>Isi nilai per surah terlebih dahulu. Surah ≥ <strong>${getAmbangSetoran(kat)}</strong> dihitung. Target: <strong>${getTargetKuantitasLabel(siswa)}</strong></span>
+        <span>Isi nilai per surah terlebih dahulu. Target: <strong>${getTargetKuantitasLabel(siswa)}</strong></span>
       </div>
     `;
     updateNilaiAkhir();
@@ -3232,7 +3232,7 @@ function updateNilaiKuantitas() {
         </div>
         ${hasil.setor.length
           ? `<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px">${chips}</div>`
-          : `<div class="text-small" style="margin-top:4px;font-style:italic">Belum ada surah Iqra' dengan nilai ≥ ${getAmbangSetoran('TAHAP_IQRA')}</div>`}
+          : `<div class="text-small" style="margin-top:4px;font-style:italic">Belum ada surah Iqra' yang tersetor</div>`}
       </div>
     `;
     updateNilaiAkhir();
@@ -3292,7 +3292,7 @@ function updateNilaiKuantitas() {
       </div>
       ${juzList.length
         ? `<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px">${juzChips}</div>`
-        : `<div class="text-small" style="margin-top:4px;font-style:italic">Belum ada surah dengan nilai ≥ ${getAmbangSetoran(kat)}</div>`}
+        : `<div class="text-small" style="margin-top:4px;font-style:italic">Belum ada surah yang tersetor</div>`}
     </div>
   `;
   updateNilaiAkhir();
