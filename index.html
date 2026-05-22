@@ -2873,8 +2873,16 @@ async function openFormPenilaian(siswaId, pengujiId) {
     // untuk kembali ke mode auto.
     let autoOverride = false;
     if (existing?.jumlah_juz != null && STATE.user.role === 'admin') {
-      const hasilAuto = hitungJuzOtomatis(barisInit, getAmbangSetoran(getKategori(s)));
-      if (Math.abs(Number(existing.jumlah_juz) - hasilAuto.totalJuz) > 0.05) {
+      const kat = getKategori(s);
+      let autoVal;
+      if (kat === 'TAHAP_IQRA') {
+        autoVal = hitungKuantitasIqra(barisInit).count;
+      } else if (kat === 'ALQURAN_PEMULA') {
+        autoVal = hitungKuantitasPemula(barisInit).totalJuz;
+      } else {
+        autoVal = hitungJuzOtomatis(barisInit, getAmbangSetoran(kat)).totalJuz;
+      }
+      if (Math.abs(Number(existing.jumlah_juz) - autoVal) > 0.05) {
         autoOverride = true;
       }
     }
