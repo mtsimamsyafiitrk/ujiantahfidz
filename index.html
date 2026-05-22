@@ -1115,8 +1115,11 @@ const BOBOT_KUANTITAS = 0.30;
 // Kelas dideteksi dari karakter angka pertama: "7A" → 7, "Kelas 8" → 8, dst.
 const TARGET_JUZ = { 7: 2, 8: 4, 9: 6 };
 
-// Ambang nilai minimum surah agar "dihitung tersetor" untuk kuantitas
-const AMBANG_SETORAN = 76;
+// Ambang nilai minimum surah agar "dihitung tersetor" untuk kuantitas (per kategori)
+const AMBANG_SETORAN = { ALQURAN_LANJUT: 65, ALQURAN_PEMULA: 50, TAHAP_IQRA: 50 };
+function getAmbangSetoran(kategori) {
+  return AMBANG_SETORAN[kategori] || AMBANG_SETORAN.ALQURAN_LANJUT;
+}
 
 // ═════════════════════════════════════════════════════════════════
 // KATEGORI SISWA
@@ -1157,7 +1160,7 @@ function hitungKuantitasIqra(baris) {
   for (const b of baris) {
     if (!b.surah_nama) continue;
     if (!SURAH_TARGET_IQRA.includes(b.surah_nama)) continue;
-    if (hitungTotal(b) >= AMBANG_SETORAN) setor.push(b.surah_nama);
+    if (hitungTotal(b) >= getAmbangSetoran('TAHAP_IQRA')) setor.push(b.surah_nama);
   }
   const count = setor.length;
   const total = SURAH_TARGET_IQRA.length;
@@ -1166,7 +1169,7 @@ function hitungKuantitasIqra(baris) {
 
 // Hitung kuantitas ALQURAN_PEMULA: hanya hitung juz 30, target = 1 juz
 function hitungKuantitasPemula(baris) {
-  const hasil = hitungJuzOtomatis(baris);
+  const hasil = hitungJuzOtomatis(baris, getAmbangSetoran('ALQURAN_PEMULA'));
   const juz30Persen = hasil.detailPerJuz[30] || 0;
   const juz30Jumlah = juz30Persen / 100;
   return { totalJuz: juz30Jumlah, juz30Persen, surahTersetor: hasil.surahTersetor };
@@ -1354,7 +1357,8 @@ function getTargetJuz(kelas) {
 // Hitung jumlah juz tersetor otomatis berdasarkan nilai per surah
 // Input: array baris [{surah_nama, kelancaran, tajwid, kekuatan_hafalan, adab_tartil}]
 // Output: { totalJuz, detailPerJuz: {juz: persen} }
-function hitungJuzOtomatis(baris) {
+function hitungJuzOtomatis(baris, ambang) {
+  if (ambang === undefined) ambang = getAmbangSetoran('ALQURAN_LANJUT');
   // Kumpulkan ayat tersetor per juz
   const ayatPerJuz = {}; // { juz: jumlah_ayat_tersetor }
   const surahTersetor = []; // detail untuk display
@@ -1363,7 +1367,7 @@ function hitungJuzOtomatis(baris) {
     if (!b.surah_nama) continue;
     // Hitung nilai per surah (pakai hitungTotal = bobot 4 aspek)
     const nilaiSurah = hitungTotal(b);
-    if (nilaiSurah < AMBANG_SETORAN) continue;
+    if (nilaiSurah < ambang) continue;
 
     const mapping = SURAH_JUZ[b.surah_nama];
     if (!mapping) continue; // surah tidak ada di data baku (misal custom)
@@ -2869,7 +2873,7 @@ async function openFormPenilaian(siswaId, pengujiId) {
     // untuk kembali ke mode auto.
     let autoOverride = false;
     if (existing?.jumlah_juz != null && STATE.user.role === 'admin') {
-      const hasilAuto = hitungJuzOtomatis(barisInit);
+      const hasilAuto = hitungJuzOtomatis(barisInit, getAmbangSetoran(getKategori(s)));
       if (Math.abs(Number(existing.jumlah_juz) - hasilAuto.totalJuz) > 0.05) {
         autoOverride = true;
       }
@@ -3010,7 +3014,7 @@ function renderFormPenilaian() {
         KUANTITAS <span style="font-size:10px;background:#fef3c7;color:#854d0e;padding:2px 8px;border-radius:999px;margin-left:4px">Bobot 30%</span>
       </div>
       <p class="text-small text-muted" style="margin-bottom:10px">
-        Otomatis dihitung dari surah bernilai ≥ ${AMBANG_SETORAN}. Target: <strong>${getTargetKuantitasLabel(s)}</strong>
+        Otomatis dihitung dari surah bernilai ≥ <strong>${getAmbangSetoran(getKategori(s))}</strong>. Target: <strong>${getTargetKuantitasLabel(s)}</strong>
       </p>
       ${isAdminUser ? `
         <!-- Admin boleh override manual -->
@@ -3197,7 +3201,7 @@ function updateNilaiKuantitas() {
     box.innerHTML = `
       <div class="alert alert-info" style="background:#fef3c7;color:#854d0e;border-color:#fde68a">
         <span class="material-symbols-outlined" style="font-size:17px">info</span>
-        <span>Isi nilai per surah terlebih dahulu. Target: <strong>${getTargetKuantitasLabel(siswa)}</strong></span>
+        <span>Isi nilai per surah terlebih dahulu. Surah ≥ <strong>${getAmbangSetoran(kat)}</strong> dihitung. Target: <strong>${getTargetKuantitasLabel(siswa)}</strong></span>
       </div>
     `;
     updateNilaiAkhir();
@@ -3228,7 +3232,7 @@ function updateNilaiKuantitas() {
         </div>
         ${hasil.setor.length
           ? `<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px">${chips}</div>`
-          : `<div class="text-small" style="margin-top:4px;font-style:italic">Belum ada surah Iqra' dengan nilai ≥ ${AMBANG_SETORAN}</div>`}
+          : `<div class="text-small" style="margin-top:4px;font-style:italic">Belum ada surah Iqra' dengan nilai ≥ ${getAmbangSetoran('TAHAP_IQRA')}</div>`}
       </div>
     `;
     updateNilaiAkhir();
@@ -3261,7 +3265,7 @@ function updateNilaiKuantitas() {
   }
 
   // ALQURAN_LANJUT (existing behavior)
-  const hasil = hitungJuzOtomatis(baris);
+  const hasil = hitungJuzOtomatis(baris, getAmbangSetoran(kat));
   FORM_STATE.jumlah_juz = Number(hasil.totalJuz.toFixed(4));
   const target = getTargetJuz(siswa.kelas);
   const nilaiKuantitas = hitungNilaiKuantitas(hasil.totalJuz, siswa.kelas);
@@ -3288,7 +3292,7 @@ function updateNilaiKuantitas() {
       </div>
       ${juzList.length
         ? `<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px">${juzChips}</div>`
-        : `<div class="text-small" style="margin-top:4px;font-style:italic">Belum ada surah dengan nilai ≥ ${AMBANG_SETORAN}</div>`}
+        : `<div class="text-small" style="margin-top:4px;font-style:italic">Belum ada surah dengan nilai ≥ ${getAmbangSetoran(kat)}</div>`}
     </div>
   `;
   updateNilaiAkhir();
@@ -3466,7 +3470,7 @@ async function simpanPenilaian() {
       juz = Number(hasil.totalJuz.toFixed(4));
       kuantitas = Math.min(100, hasil.totalJuz * 100);
     } else {
-      const hasil = hitungJuzOtomatis(validBaris);
+      const hasil = hitungJuzOtomatis(validBaris, getAmbangSetoran(kat));
       juz = Number(hasil.totalJuz.toFixed(4));
       kuantitas = hitungNilaiKuantitas(juz, siswa.kelas);
     }
@@ -6468,7 +6472,7 @@ async function recalcPenilaianForSiswa(siswaId, siswa) {
       juz = Number(hasil.totalJuz.toFixed(4));
       kuantitas = Math.min(100, hasil.totalJuz * 100);
     } else {
-      const hasil = hitungJuzOtomatis(details);
+      const hasil = hitungJuzOtomatis(details, getAmbangSetoran(kat));
       juz = Number(hasil.totalJuz.toFixed(4));
       kuantitas = hitungNilaiKuantitas(juz, siswa.kelas);
     }
