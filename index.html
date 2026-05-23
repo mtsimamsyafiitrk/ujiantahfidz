@@ -2873,7 +2873,7 @@ async function openFormPenilaian(siswaId, pengujiId) {
     // untuk kembali ke mode auto.
     let autoOverride = false;
     if (existing?.jumlah_juz != null && STATE.user.role === 'admin') {
-      const kat = getKategori(s);
+      const kat = getKategori(siswa);
       let autoVal;
       if (kat === 'TAHAP_IQRA') {
         autoVal = hitungKuantitasIqra(barisInit).count;
@@ -3555,7 +3555,8 @@ async function simpanPenilaian() {
     showPage('penilaian');
   } catch (e) {
     hideLoading();
-    showToast('❌ Gagal simpan: ' + e.message);
+    const isNetworkErr = e.message === 'Failed to fetch' || e.message === 'NetworkError when attempting to fetch resource.';
+    showToast('❌ Gagal simpan: ' + (isNetworkErr ? 'Tidak dapat terhubung ke server. Periksa koneksi internet atau coba beberapa saat lagi.' : e.message));
   }
 }
 
