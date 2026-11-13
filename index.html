@@ -1925,6 +1925,9 @@ CREATE TABLE IF NOT EXISTS arsip_nilai (
 );
 CREATE INDEX IF NOT EXISTS arsip_nilai_periode_idx ON arsip_nilai (periode);
 ALTER TABLE arsip_nilai DISABLE ROW LEVEL SECURITY;
+-- Bila RLS tetap dinyalakan (mis. memilih "Run and enable RLS" di SQL Editor), policy ini tetap mengizinkan aplikasi
+DROP POLICY IF EXISTS arsip_nilai_semua ON arsip_nilai;
+CREATE POLICY arsip_nilai_semua ON arsip_nilai FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
 GRANT ALL ON arsip_nilai TO anon, authenticated;
 
 -- Tutup periode: arsipkan semua nilai, kosongkan nilai & penugasan,
@@ -1987,6 +1990,30 @@ END $fn$;
 GRANT EXECUTE ON FUNCTION tutup_periode(TEXT, BOOLEAN, TEXT, TEXT) TO anon, authenticated;
 
 NOTIFY pgrst, 'reload schema';`;
+
+const SQL_PERBAIKAN_RLS = `ALTER TABLE arsip_nilai DISABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS arsip_nilai_semua ON arsip_nilai;
+CREATE POLICY arsip_nilai_semua ON arsip_nilai FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
+GRANT ALL ON arsip_nilai TO anon, authenticated;
+NOTIFY pgrst, 'reload schema';`;
+
+function tampilkanPerbaikanRLS() {
+  showModal(`
+    <div class="modal-header">
+      <h3>Tabel arsip masih terkunci</h3>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <p style="font-size:14px;line-height:1.55;margin-bottom:10px">
+      Belum ada yang berubah: nilai dan santri masih seperti semula. Database menolak menyimpan arsip karena pengaman
+      <em>Row Level Security</em> menyala di tabel arsip. Jalankan SQL ini sekali di <strong>Supabase → SQL Editor</strong>, lalu ulangi.
+    </p>
+    <pre style="background:#F1F5F9;padding:12px;border-radius:10px;font-size:11px;overflow-x:auto;line-height:1.6;color:#0f172a">${escapeHtml(SQL_PERBAIKAN_RLS)}</pre>
+    <div style="display:flex;gap:8px;margin-top:12px">
+      <button class="btn btn-outline" style="flex:1" onclick="navigator.clipboard.writeText(SQL_PERBAIKAN_RLS).then(() => showToast('✅ SQL disalin'))">Salin SQL</button>
+      <button class="btn btn-primary" style="flex:1" onclick="closeModal()">Tutup</button>
+    </div>
+  `);
+}
 
 async function cekPerluMigrasi() {
   const hasil = await Promise.all([
@@ -6672,6 +6699,8 @@ function submitTutupPeriode() {
         renderTabPeriode();
       } catch (e) {
         hideLoading();
+        // Tabel arsip terkunci RLS (biasanya karena memilih "Run and enable RLS" di SQL Editor Supabase)
+        if (/row-level security/i.test((e && e.message) || '')) return tampilkanPerbaikanRLS();
         showToast('❌ ' + pesanError(e), 6000);
       }
     },

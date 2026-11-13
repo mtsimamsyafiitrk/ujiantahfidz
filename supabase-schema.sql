@@ -282,6 +282,9 @@ CREATE TABLE IF NOT EXISTS arsip_nilai (
 );
 CREATE INDEX IF NOT EXISTS arsip_nilai_periode_idx ON arsip_nilai (periode);
 ALTER TABLE arsip_nilai DISABLE ROW LEVEL SECURITY;
+-- Bila RLS tetap dinyalakan (mis. memilih "Run and enable RLS" di SQL Editor), policy ini tetap mengizinkan aplikasi
+DROP POLICY IF EXISTS arsip_nilai_semua ON arsip_nilai;
+CREATE POLICY arsip_nilai_semua ON arsip_nilai FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
 GRANT ALL ON arsip_nilai TO anon, authenticated;
 
 -- Tutup periode: arsipkan semua nilai, kosongkan nilai & penugasan,
