@@ -972,6 +972,151 @@
     }
   }
 
+
+  /* ═════════════════════════════════════════════════════════════
+     TEMA V2 — datar, ringkas, tanpa gradasi & animasi masuk
+     ═════════════════════════════════════════════════════════════ */
+  :root {
+    --primary: #1D4ED8; --primary-light: #3B82F6; --primary-dark: #1E3A8A;
+    --primary-gradient: linear-gradient(#1D4ED8, #1D4ED8);
+    --bg: #F5F7FA; --bg-input: #FFFFFF; --text-light: #64748B; --border: #CBD5E1;
+    --info-light: #EEF2FF; --line: #E2E8F0;
+  }
+  .main-content > *, .list-item, .stat-card, .card, .badge, .alert, .header-logo { animation: none !important; }
+  .app-header { background: #fff; backdrop-filter: none; -webkit-backdrop-filter: none; box-shadow: none; border-bottom: 1px solid var(--line); padding: 10px 16px; }
+  .header-logo { display: none; }
+  .header-text h1 { font-family: inherit; font-style: normal; font-weight: 800; color: var(--text); font-size: 15px; }
+  .header-text p { font-size: 12px; color: var(--text-muted); }
+  .user-chip { background: #fff; color: var(--text); border: 1px solid var(--line); box-shadow: none; min-height: 40px; font-size: 13px; padding: 0 12px; max-width: 40vw; overflow: hidden; white-space: nowrap; }
+  .logout-btn { background: #fff; border: 1px solid var(--line); color: var(--text-muted); border-radius: 12px; width: 40px; height: 40px; }
+  .bottom-nav { background: #fff; backdrop-filter: none; -webkit-backdrop-filter: none; box-shadow: none; border-top: 1px solid var(--line); padding-bottom: calc(6px + env(safe-area-inset-bottom)); }
+  .bottom-nav-inner { background: none; backdrop-filter: none; box-shadow: none; border-radius: 0; margin: 4px auto 0; padding: 0 8px; }
+  .nav-item { color: var(--text-muted); border-radius: 12px; min-height: 52px; padding: 6px 4px; }
+  .nav-item .nav-label { font-size: 12px; text-transform: none; letter-spacing: 0; font-weight: 600; }
+  .nav-item.active { background: none; color: var(--primary); transform: none; box-shadow: none; animation: none; }
+  .nav-item.active .nav-label { font-weight: 800; }
+  .nav-item.active .nav-icon { transform: none; }
+  @media (max-width: 380px) { .nav-item:not(.active) .nav-label { display: block; } }
+  .main-content { padding: 16px 16px 100px; }
+  .page-header { margin-bottom: 14px; }
+  .page-header h2 { font-family: inherit; font-weight: 800; font-size: 20px; }
+  .page-header h2 > .material-symbols-outlined { display: none; }
+  .page-header p { color: var(--text-muted); }
+  .card { border-radius: 14px; box-shadow: none; border: 1px solid var(--line); padding: 16px; margin-bottom: 12px; }
+  .card:hover { box-shadow: none; transform: none; }
+  .card-title { color: var(--text); text-transform: none; letter-spacing: 0; font-size: 15px; border-bottom: none; padding-bottom: 0; margin-bottom: 12px; }
+  .btn { border-radius: 12px; min-height: 44px; }
+  .btn-primary, .btn-danger { box-shadow: none; }
+  .btn-primary:hover:not(:disabled) { box-shadow: none; transform: none; }
+  .btn-sm { min-height: 40px; font-size: 13px; }
+  .btn-accent { border-width: 1px; }
+  .btn-outline { border-width: 1px; color: var(--text); background: #fff; }
+  .btn-icon { width: 40px; height: 40px; }
+  input[type="text"], input[type="number"], input[type="password"], input[type="date"], select, textarea { border-width: 1px; border-radius: 12px; min-height: 44px; }
+  .list-item { box-shadow: none; border: 1px solid var(--line); border-radius: 14px; }
+  .list-item:hover { box-shadow: none; transform: none; }
+  .list-avatar { border-radius: 10px; border: none; background: var(--info-light); color: var(--primary-dark); width: 40px; height: 40px; font-size: 14px; }
+  .list-meta { color: var(--text-muted); font-size: 12px; }
+  .filter-chip { border-width: 1px; min-height: 40px; color: var(--text-muted); }
+  .stat-card { border-radius: 14px; box-shadow: none; border: 1px solid var(--line); padding: 14px; }
+  .stat-card::before { display: none; }
+  .stat-number { font-family: inherit !important; font-size: 28px; }
+  .stat-label { color: var(--text-muted); }
+  .progress-bar { height: 8px; background: var(--line); }
+  .modal-header h3, .confirm-box h3 { font-family: inherit; font-weight: 800; }
+  .confirm-box p { color: var(--text-muted); }
+  .text-muted { color: var(--text-muted); }
+  .login-logo { display: none; }
+
+  /* Mode form (Keterangan & Isi nilai): menu bawah diganti bilah Simpan */
+  body.mode-form .bottom-nav { display: none; }
+  body.mode-form .main-content { padding-bottom: 170px; }
+  body.mode-form .toast { bottom: 150px; }
+
+  /* ── Komponen layar penguji ── */
+  .v-progress { margin-bottom: 14px; }
+  .v-progress-row { display: flex; justify-content: space-between; font-size: 13px; font-weight: 700; margin-bottom: 6px; }
+  .v-progress-row .muted { color: var(--text-muted); font-weight: 600; }
+  .v-search { display: flex; align-items: center; gap: 10px; min-height: 48px; padding: 0 14px; margin: 0 0 12px; border-radius: 12px; border: 1px solid var(--border); background: #fff; color: var(--text-muted); }
+  .v-search-strong { border-color: #94A3B8; min-height: 50px; margin-bottom: 6px; }
+  .v-search input { flex: 1; min-width: 0; border: none !important; box-shadow: none !important; background: transparent !important; padding: 0; min-height: 0; font-size: 16px; }
+  .v-seg { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px; padding: 4px; border-radius: 12px; background: var(--line); margin-bottom: 12px; }
+  .v-seg button { min-height: 44px; border: none; border-radius: 9px; background: transparent; font-family: inherit; font-size: 14px; font-weight: 600; color: var(--text-muted); cursor: pointer; }
+  .v-seg button.on { background: #fff; color: var(--text); font-weight: 800; }
+  .v-row { display: flex; align-items: center; gap: 12px; width: 100%; padding: 12px 14px; margin-bottom: 8px; border-radius: 14px; background: #fff; border: 1px solid var(--line); font-family: inherit; text-align: left; color: var(--text); cursor: pointer; }
+  .v-row > .material-symbols-outlined { color: var(--text-muted); font-size: 20px; }
+  .v-kelas { width: 40px; height: 40px; border-radius: 10px; background: var(--info-light); color: var(--primary-dark); font-size: 13px; font-weight: 800; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .v-row-info { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+  .v-row-nama { font-size: 15px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .v-row-ket { font-size: 13px; color: var(--text-muted); }
+  .v-empty { font-size: 14px; color: var(--text-muted); text-align: center; padding: 28px 12px; }
+  .v-hint { font-size: 13px; color: var(--text-muted); margin: 8px 2px 0; line-height: 1.45; }
+
+  .v-formhead { display: flex; align-items: center; gap: 6px; margin: -6px -6px 14px; }
+  .v-back { width: 44px; height: 44px; border: none; background: transparent; border-radius: 12px; cursor: pointer; color: var(--text); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .v-formhead-info { min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 2px; }
+  .v-title { font-size: 17px; font-weight: 800; line-height: 1.25; }
+  .v-sub { font-size: 13px; color: var(--text-muted); }
+  .v-sub-btn { border: none; background: transparent; padding: 4px 0; font-family: inherit; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; text-align: left; }
+  .v-section { margin-bottom: 24px; }
+  .v-section-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 44px; font-size: 15px; font-weight: 800; }
+  .v-link { border: none; background: transparent; font-family: inherit; font-size: 13px; font-weight: 700; color: var(--primary); cursor: pointer; display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 4px; }
+  .v-link-danger { color: var(--danger); display: flex; }
+  .v-status-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .v-status { min-height: 76px; border-radius: 14px; border: 1px solid var(--border); background: #fff; color: #334155; font-family: inherit; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; }
+  .v-status b { font-size: 17px; font-weight: 800; }
+  .v-status span { font-size: 12px; font-weight: 500; }
+  .v-status.on { border: 2px solid var(--primary); background: var(--info-light); color: var(--primary-dark); }
+  .v-status.off { border-color: var(--line); background: #F1F5F9; color: #64748B; cursor: default; }
+  .v-stepper { display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: 14px; background: #fff; border: 1px solid var(--line); }
+  .v-stepper button { width: 56px; height: 56px; border-radius: 12px; border: 1px solid var(--border); background: #fff; font-family: inherit; font-size: 26px; font-weight: 600; color: var(--text); cursor: pointer; }
+  .v-stepper > div { flex: 1; display: flex; flex-direction: column; align-items: center; }
+  .v-stepper b { font-size: 34px; font-weight: 800; line-height: 1.1; }
+  .v-stepper span { font-size: 13px; font-weight: 600; color: var(--text-muted); }
+
+  .v-hasil { display: flex; flex-direction: column; border-radius: 12px; border: 1px solid var(--border); background: #fff; overflow: hidden; margin-bottom: 6px; }
+  .v-hasil button { min-height: 48px; padding: 0 14px; border: none; border-bottom: 1px solid var(--line); background: #fff; font-family: inherit; font-size: 15px; font-weight: 600; color: var(--text); text-align: left; cursor: pointer; }
+  .v-hasil button:last-child { border-bottom: none; }
+  .v-card { padding: 10px 14px 14px; margin-top: 10px; border-radius: 14px; background: #fff; border: 1px solid var(--line); display: flex; flex-direction: column; gap: 8px; }
+  .v-card.aktif { border: 2px solid var(--primary); padding: 9px 13px 13px; }
+  .v-card-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 36px; }
+  .v-card-nama { font-size: 15px; font-weight: 800; color: var(--text); display: flex; align-items: center; flex-wrap: wrap; gap: 8px; }
+  .v-card-right { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
+  .v-juz { padding: 2px 8px; border-radius: 999px; background: var(--info-light); color: var(--primary-dark); font-size: 12px; font-weight: 700; white-space: nowrap; }
+  .v-total { font-size: 15px; font-weight: 800; color: var(--primary); }
+  .v-x { width: 36px; height: 36px; border: none; background: transparent; border-radius: 8px; cursor: pointer; color: var(--text-muted); display: flex; align-items: center; justify-content: center; }
+  .v-grid4 { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+  .v-grid3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+  .v-grid4 label, .v-grid3 label { margin: 0; display: flex; flex-direction: column; gap: 4px; font-size: 12px; font-weight: 600; color: var(--text-muted); }
+  .v-grid4 input, .v-grid3 input { height: 46px; padding: 0 2px; text-align: center; font-size: 17px; font-weight: 700; border-radius: 10px; -moz-appearance: textfield; }
+  .v-grid4 input::-webkit-outer-spin-button, .v-grid4 input::-webkit-inner-spin-button,
+  .v-grid3 input::-webkit-outer-spin-button, .v-grid3 input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  .v-salin { min-height: 44px; border-radius: 10px; border: 1px solid #C7D2FE; background: var(--info-light); color: var(--primary-dark); font-family: inherit; font-size: 14px; font-weight: 700; cursor: pointer; }
+  .v-switch-row { flex-direction: row; align-items: center; justify-content: space-between; padding: 12px 14px; }
+  .v-switch { appearance: none; -webkit-appearance: none; width: 56px; height: 32px; border-radius: 999px; background: #94A3B8; position: relative; cursor: pointer; flex-shrink: 0; transition: background 0.15s; }
+  .v-switch::after { content: ''; position: absolute; top: 3px; left: 3px; width: 26px; height: 26px; border-radius: 999px; background: #fff; transition: left 0.15s; }
+  .v-switch:checked { background: var(--primary); }
+  .v-switch:checked::after { left: 27px; }
+  .v-admin-override { margin-top: 14px; padding: 12px 14px; border-radius: 12px; border: 1px dashed #94A3B8; font-size: 13px; }
+  .v-footer { position: fixed; left: 0; right: 0; bottom: 0; z-index: 100; background: #fff; border-top: 1px solid var(--line); padding: 10px 16px calc(14px + env(safe-area-inset-bottom)); }
+  .v-footer-inner { max-width: 648px; margin: 0 auto; display: flex; flex-direction: column; gap: 10px; }
+  .v-footer-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  .v-footer-meta { display: flex; align-items: center; gap: 6px; min-width: 0; }
+  .v-date { width: auto !important; min-height: 40px !important; padding: 0 10px !important; font-size: 13px !important; }
+  .v-akhir { display: flex; flex-direction: column; align-items: flex-end; flex-shrink: 0; }
+  .v-akhir span { font-size: 11px; font-weight: 700; color: var(--text-muted); }
+  .v-akhir b { font-size: 26px; font-weight: 800; line-height: 1.1; }
+
+  /* ── Penugasan (admin): dikelompokkan per penguji ── */
+  .v-group { border: 1px solid var(--line); border-radius: 14px; background: #fff; margin-bottom: 8px; overflow: hidden; }
+  .v-group > summary { list-style: none; cursor: pointer; padding: 14px; display: flex; flex-direction: column; gap: 8px; }
+  .v-group > summary::-webkit-details-marker { display: none; }
+  .v-group-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .v-group-row b { font-size: 15px; font-weight: 700; }
+  .v-group-row span { font-size: 13px; font-weight: 600; color: var(--text-muted); white-space: nowrap; }
+  .v-group[open] > summary { border-bottom: 1px solid var(--line); }
+  .v-group-body { padding: 10px 10px 2px; background: var(--bg); }
+  .v-menu { display: flex; flex-direction: column; gap: 8px; }
 </style>
 </head>
 <body>
@@ -1107,82 +1252,94 @@ const BOBOT = {
   adab_tartil: 0.15
 };
 
-// Bobot Kualitas vs Kuantitas di nilai akhir
+// Sistem penilaian Al-Qur'an: Kualitas 70% + Kuantitas 30%
 const BOBOT_KUALITAS  = 0.70;
 const BOBOT_KUANTITAS = 0.30;
 
-// Target minimal juz per kelas (nilai kuantitas = (juz/target)×100, max 100)
-// Kelas dideteksi dari karakter angka pertama: "7A" → 7, "Kelas 8" → 8, dst.
+// Target juz per kelas (nilai kuantitas = (juz/target)×100, maks 100)
+// Kelas dideteksi dari angka pertama: "7A" → 7, "Kelas 8" → 8, dst.
 const TARGET_JUZ = { 7: 2, 8: 4, 9: 6 };
 
-// Ambang nilai minimum surah agar "dihitung tersetor" untuk kuantitas (per kategori)
-const AMBANG_SETORAN = { ALQURAN_LANJUT: 65, ALQURAN_PEMULA: 50, TAHAP_IQRA: 50 };
-function getAmbangSetoran(kategori) {
-  return AMBANG_SETORAN[kategori] || AMBANG_SETORAN.ALQURAN_LANJUT;
-}
+// Nilai minimum sebuah surah agar dihitung "tersetor" untuk kuantitas
+const AMBANG_SETORAN = 65;
+
+// Santri Iqra': tidak wajib menghafal → nilai membaca berbobot 76% (nilai tertinggi 76).
+// Bila penguji mengaktifkan nilai hafalan, hafalannya dinilai dengan sistem Al-Qur'an
+// (kualitas 70% + kuantitas 30%, target kelas) dan mengisi 24% sisanya.
+const BOBOT_BACA_IQRA    = 0.76;
+const BOBOT_HAFALAN_IQRA = 0.24;
 
 // ═════════════════════════════════════════════════════════════════
-// KATEGORI SISWA
+// STATUS SANTRI (kolom siswa.kategori)
 // ═════════════════════════════════════════════════════════════════
 const KATEGORI_LIST = [
-  { value: 'ALQURAN_LANJUT', label: "Al-Qur'an Lanjut",  badge: 'badge-blue',   icon: '📚' },
-  { value: 'ALQURAN_PEMULA', label: "Al-Qur'an Pemula",  badge: 'badge-cyan',   icon: '📖' },
-  { value: 'TAHAP_IQRA',     label: "Tahap Iqra'",       badge: 'badge-green',  icon: '🔤' }
+  { value: 'ALQURAN_LANJUT', label: "Al-Qur'an", badge: 'badge-blue',  icon: '' },
+  { value: 'TAHAP_IQRA',     label: "Iqra'",     badge: 'badge-green', icon: '' }
 ];
 
-// 22 surah target untuk TAHAP_IQRA (Ad-Dhuha s.d. An-Nas)
-const SURAH_TARGET_IQRA = [
-  'Ad-Duha','Asy-Syarh','At-Tin',"Al-'Alaq",'Al-Qadr',
-  'Al-Bayyinah','Az-Zalzalah',"Al-'Adiyat","Al-Qari'ah",'At-Takasur',
-  "Al-'Asr",'Al-Humazah','Al-Fil','Quraisy',"Al-Ma'un",
-  'Al-Kausar','Al-Kafirun','An-Nasr','Al-Lahab','Al-Ikhlas',
-  'Al-Falaq','An-Nas'
-];
-
+// Nilai lama 'ALQURAN_PEMULA' diperlakukan sebagai Al-Qur'an (target mengikuti kelas)
 function getKategori(siswa) {
-  return (siswa && siswa.kategori) ? siswa.kategori : 'ALQURAN_LANJUT';
+  return (siswa && siswa.kategori === 'TAHAP_IQRA') ? 'TAHAP_IQRA' : 'ALQURAN_LANJUT';
 }
 
 function getKategoriInfo(kategori) {
-  return KATEGORI_LIST.find(k => k.value === (kategori || 'ALQURAN_LANJUT')) || KATEGORI_LIST[0];
+  return KATEGORI_LIST.find(k => k.value === (kategori === 'TAHAP_IQRA' ? 'TAHAP_IQRA' : 'ALQURAN_LANJUT'));
 }
 
-function getTargetKuantitasLabel(siswa) {
-  const kat = getKategori(siswa);
-  if (kat === 'TAHAP_IQRA')     return `${SURAH_TARGET_IQRA.length} surah (Ad-Dhuha s.d. An-Nas)`;
-  if (kat === 'ALQURAN_PEMULA') return '1 juz (Juz 30)';
-  return `${getTargetJuz(siswa?.kelas)} juz (target kelas ${siswa?.kelas || '-'})`;
+function fmtJuz(n) {
+  return String(Number(n) || 0).replace('.', ',');
 }
 
-// Hitung kuantitas TAHAP_IQRA: surah dari daftar target yang tersetor ≥ AMBANG_SETORAN
-function hitungKuantitasIqra(baris) {
-  const setor = [];
-  for (const b of baris) {
-    if (!b.surah_nama) continue;
-    if (!SURAH_TARGET_IQRA.includes(b.surah_nama)) continue;
-    if (setor.includes(b.surah_nama)) continue; // surah yang sama diisi 2x → dihitung sekali
-    if (hitungTotal(b) >= getAmbangSetoran('TAHAP_IQRA')) setor.push(b.surah_nama);
+function pesanError(e) {
+  const m = (e && e.message) || String(e);
+  return (m === 'Failed to fetch' || m.startsWith('NetworkError') || m.includes('TypeError: Failed to fetch'))
+    ? 'Tidak dapat terhubung ke server. Periksa koneksi internet atau coba beberapa saat lagi.'
+    : m;
+}
+
+function nomorSurah(nama) {
+  const s = (STATE.cache.surah || []).find(x => x.nama === nama);
+  if (s) return s.nomor;
+  const i = Object.keys(SURAH_JUZ).indexOf(nama);
+  return i >= 0 ? i + 1 : 999;
+}
+
+// "Juz 30", atau "Juz 1–3" untuk surah yang terbagi ke beberapa juz
+function labelJuzSurah(nama) {
+  const m = SURAH_JUZ[nama];
+  if (!m) return '';
+  const a = m[0].juz, b = m[m.length - 1].juz;
+  return a === b ? `Juz ${a}` : `Juz ${a}–${b}`;
+}
+
+const FIELD_NILAI = ['kelancaran', 'tajwid', 'kekuatan_hafalan', 'adab_tartil'];
+const terisi = v => v !== '' && v !== null && v !== undefined && !isNaN(Number(v));
+function barisLengkap(b) { return FIELD_NILAI.every(f => terisi(b[f])); }
+function barisKosong(b)  { return FIELD_NILAI.every(f => b[f] === '' || b[f] === null || b[f] === undefined); }
+function bacaLengkap(baca) { return !!baca && ['lancar', 'tajwid', 'adab'].every(f => terisi(baca[f])); }
+
+// Sistem Al-Qur'an: kualitas (rata-rata nilai surah) 70% + kuantitas (juz tersetor ÷ target kelas) 30%
+function hitungSistemQuran(siswa, baris, juzManual) {
+  const b = (baris || []).filter(barisLengkap);
+  const kualitas = b.length ? b.reduce((a, x) => a + hitungTotal(x), 0) / b.length : 0;
+  const juz = terisi(juzManual) ? Number(juzManual) : Number(hitungJuzOtomatis(b).totalJuz.toFixed(4));
+  const kuantitas = hitungNilaiKuantitas(juz, siswa?.kelas);
+  return { kualitas, juz, kuantitas, nilai: b.length ? hitungNilaiAkhir(kualitas, kuantitas) : 0 };
+}
+
+// Satu-satunya tempat rumus nilai akhir. Dipakai form, simpan, dan hitung ulang.
+function hitungPenilaian({ siswa, baris, baca, hafalanAktif, juzManual }) {
+  if (getKategori(siswa) === 'TAHAP_IQRA') {
+    const membaca = bacaLengkap(baca)
+      ? (Number(baca.lancar) + Number(baca.tajwid) + Number(baca.adab)) / 3
+      : 0;
+    const q = hafalanAktif
+      ? hitungSistemQuran(siswa, baris, juzManual)
+      : { kualitas: 0, juz: 0, kuantitas: 0, nilai: 0 };
+    return { ...q, membaca, hafalan: q.nilai, akhir: membaca * BOBOT_BACA_IQRA + q.nilai * BOBOT_HAFALAN_IQRA };
   }
-  const count = setor.length;
-  const total = SURAH_TARGET_IQRA.length;
-  return { count, total, setor, persen: (count / total) * 100 };
-}
-
-// Hitung kuantitas ALQURAN_PEMULA: hanya hitung juz 30, target = 1 juz
-function hitungKuantitasPemula(baris) {
-  const hasil = hitungJuzOtomatis(baris, getAmbangSetoran('ALQURAN_PEMULA'));
-  const juz30Persen = hasil.detailPerJuz[30] || 0;
-  const juz30Jumlah = juz30Persen / 100;
-  return { totalJuz: juz30Jumlah, juz30Persen, surahTersetor: hasil.surahTersetor };
-}
-
-// Konversi rawVal → nilai kuantitas 0-100 sesuai kategori
-// rawVal: untuk IQRA = jumlah surah tersetor, PEMULA = juz30 fraksi, LANJUT = total juz
-function hitungNilaiKuantitasFromRaw(rawVal, siswa) {
-  const kat = getKategori(siswa);
-  if (kat === 'TAHAP_IQRA')     return Math.min(100, Math.max(0, (rawVal / SURAH_TARGET_IQRA.length) * 100));
-  if (kat === 'ALQURAN_PEMULA') return Math.min(100, Math.max(0, rawVal * 100));
-  return hitungNilaiKuantitas(rawVal, siswa?.kelas);
+  const q = hitungSistemQuran(siswa, baris, juzManual);
+  return { ...q, membaca: null, hafalan: null, akhir: q.nilai };
 }
 
 // ═════════════════════════════════════════════════════════════════
@@ -1368,7 +1525,7 @@ function getTargetJuz(kelas) {
 // Input: array baris [{surah_nama, kelancaran, tajwid, kekuatan_hafalan, adab_tartil}]
 // Output: { totalJuz, detailPerJuz: {juz: persen} }
 function hitungJuzOtomatis(baris, ambang) {
-  if (ambang === undefined) ambang = getAmbangSetoran('ALQURAN_LANJUT');
+  if (ambang === undefined) ambang = AMBANG_SETORAN;
   // Kumpulkan ayat tersetor per juz
   const ayatPerJuz = {}; // { juz: jumlah_ayat_tersetor }
   const surahTersetor = []; // detail untuk display
@@ -1674,24 +1831,83 @@ async function enterApp() {
     }
   } catch (e) {}
 
+  // Kolom baru (status dikunci, jumlah hafalan, nilai membaca) harus sudah ada di database
+  STATE.perluMigrasi = await cekPerluMigrasi();
+  if (STATE.perluMigrasi) {
+    document.getElementById('bottomNavInner').innerHTML = '';
+    renderHalamanMigrasi();
+    return;
+  }
+
   renderBottomNav();
   showPage('home');
 }
 
+const SQL_MIGRASI = `-- Migrasi November 2026: status santri terkunci, jumlah hafalan, nilai membaca Iqra'
+ALTER TABLE siswa
+  ADD COLUMN IF NOT EXISTS status_dikunci BOOLEAN NOT NULL DEFAULT FALSE,
+  ADD COLUMN IF NOT EXISTS jumlah_hafalan NUMERIC;
+
+ALTER TABLE penilaian
+  ADD COLUMN IF NOT EXISTS baca_lancar NUMERIC,
+  ADD COLUMN IF NOT EXISTS baca_tajwid NUMERIC,
+  ADD COLUMN IF NOT EXISTS baca_adab NUMERIC,
+  ADD COLUMN IF NOT EXISTS hafalan_aktif BOOLEAN NOT NULL DEFAULT FALSE;
+
+ALTER TABLE pengaturan
+  ADD COLUMN IF NOT EXISTS semester TEXT DEFAULT 'Ganjil';
+
+NOTIFY pgrst, 'reload schema';`;
+
+async function cekPerluMigrasi() {
+  const [a, b, c] = await Promise.all([
+    sb.from('siswa').select('status_dikunci, jumlah_hafalan').limit(1),
+    sb.from('penilaian').select('baca_lancar, baca_tajwid, baca_adab, hafalan_aktif').limit(1),
+    sb.from('pengaturan').select('semester').limit(1)
+  ]);
+  // 42703 = kolom tidak ada (Postgres), PGRST204 = kolom tidak dikenal (PostgREST)
+  return [a, b, c].some(r => r.error && (r.error.code === '42703' || r.error.code === 'PGRST204'));
+}
+
+function renderHalamanMigrasi() {
+  const isAdmin = STATE.user.role === 'admin';
+  document.getElementById('main-content').innerHTML = isAdmin ? `
+    <div class="page-header">
+      <h2>Database perlu diperbarui</h2>
+      <p>Versi aplikasi ini membutuhkan beberapa kolom baru. Data yang sudah ada tidak berubah.</p>
+    </div>
+    <div class="card">
+      <div class="card-title">Langkah</div>
+      <ol style="padding-left:18px;font-size:14px;line-height:1.7;margin-bottom:12px">
+        <li>Buka <strong>Supabase → SQL Editor → New query</strong>.</li>
+        <li>Tempel SQL di bawah ini, lalu tekan <strong>Run</strong>.</li>
+        <li>Kembali ke sini dan tekan <strong>Periksa lagi</strong>.</li>
+      </ol>
+      <pre style="background:#F1F5F9;padding:12px;border-radius:10px;font-size:11px;overflow-x:auto;line-height:1.6;color:#0f172a">${escapeHtml(SQL_MIGRASI)}</pre>
+      <div style="display:flex;gap:8px;margin-top:12px">
+        <button class="btn btn-outline" style="flex:1" onclick="navigator.clipboard.writeText(SQL_MIGRASI).then(() => showToast('✅ SQL disalin'))">Salin SQL</button>
+        <button class="btn btn-primary" style="flex:1" onclick="location.reload()">Periksa lagi</button>
+      </div>
+    </div>
+  ` : `
+    <div class="v-empty" style="padding-top:60px">
+      Aplikasi sedang diperbarui oleh admin.<br>Silakan coba lagi beberapa saat lagi.
+      <div style="margin-top:16px"><button class="btn btn-primary" onclick="location.reload()">Coba lagi</button></div>
+    </div>`;
+}
+
 function renderBottomNav() {
   const isAdmin = STATE.user.role === 'admin';
-  // 5 menu untuk admin: Dashboard, Penguji, Siswa, Rekap, Pengaturan
-  // 3 menu untuk penguji/ketua_tahfidz: Dashboard, Tugas, Rekap
+  // Admin: Beranda, Santri, Penugasan, Rekap (Pengaturan lewat tombol nama di kanan atas)
+  // Penguji / ketua tahfidz: Santri, Rekap
   const items = isAdmin ? [
-    { id: 'home',       icon: 'dashboard',  label: 'Dashboard' },
-    { id: 'penguji',    icon: 'groups',     label: 'Penguji' },
-    { id: 'siswa',      icon: 'school',     label: 'Siswa' },
-    { id: 'rekap',      icon: 'analytics',  label: 'Rekap' },
-    { id: 'pengaturan', icon: 'settings',   label: 'Pengaturan' }
+    { id: 'home',    icon: 'home',        label: 'Beranda' },
+    { id: 'siswa',   icon: 'group',       label: 'Santri' },
+    { id: 'penguji', icon: 'swap_horiz',  label: 'Penugasan' },
+    { id: 'rekap',   icon: 'bar_chart',   label: 'Rekap' }
   ] : [
-    { id: 'home',       icon: 'dashboard',  label: 'Dashboard' },
-    { id: 'tugas',      icon: 'edit_note',  label: 'Tugas' },
-    { id: 'rekap',      icon: 'analytics',  label: 'Rekap' }
+    { id: 'home',    icon: 'list',        label: 'Santri' },
+    { id: 'rekap',   icon: 'bar_chart',   label: 'Rekap' }
   ];
   document.getElementById('bottomNavInner').innerHTML = items
     .map(i => `
@@ -1768,23 +1984,23 @@ function showPage(page) {
   if (!isAdmin && ['penguji', 'siswa'].includes(page)) {
     page = 'home';
   }
-  // Route guard: penguji tidak punya halaman 'tugas'? sebaliknya: admin tidak punya 'tugas'
-  if (isAdmin && page === 'tugas') page = 'penguji';
+  if (page === 'tugas' || page === 'penilaian') page = isAdmin ? 'rekap' : 'home';
+  if (STATE.perluMigrasi) return renderHalamanMigrasi();
 
   STATE.page = page;
+  document.body.classList.remove('mode-form');
   renderBottomNav();
+  window.scrollTo(0, 0);
 
   switch (page) {
-    case 'home':       return renderHome();
-    case 'tugas':      return renderPenilaianList();        // penguji: daftar siswa yang ditugaskan
-    case 'penilaian':  return renderPenilaianList();        // alias lama (kembali dari form)
-    case 'penguji':    return renderHalamanPenguji();       // admin: kelola penguji + assignment
-    case 'siswa':      return renderHalamanSiswa();         // admin: kelola siswa
+    case 'home':       return isAdmin ? renderHome() : renderDaftarSantri();
+    case 'penguji':    return renderHalamanPenguji();       // admin: penugasan santri → penguji
+    case 'siswa':      return renderHalamanSiswa();         // admin: kelola santri
     case 'rekap':      return renderRekap();
-    case 'pengaturan': return renderHalamanPengaturan();    // pengganti profil + admin lembaga
+    case 'pengaturan': return renderHalamanPengaturan();
     case 'profil':     return renderHalamanPengaturan();    // alias lama
-    case 'admin':      return renderHalamanPengaturan();    // alias lama (redirect kalau ada link lama)
-    default:           return renderHome();
+    case 'admin':      return renderHalamanPengaturan();    // alias lama
+    default:           return isAdmin ? renderHome() : renderDaftarSantri();
   }
 }
 
@@ -1812,7 +2028,7 @@ async function fetchAssignmentForPenguji(pengujiId) {
   const { data, error } = await sb.from('assignment')
     .select(`
       id, status, created_at, siswa_id, penguji_id,
-      siswa:siswa_id (id, nisn, nama, kelas, semester, jenis_kelamin, tahun_ajaran, kategori)
+      siswa:siswa_id (id, nisn, nama, kelas, semester, jenis_kelamin, tahun_ajaran, kategori, status_dikunci, jumlah_hafalan)
     `)
     .eq('penguji_id', pengujiId);
   if (error) throw error;
@@ -1844,7 +2060,7 @@ async function fetchAllPenilaianLengkap() {
   const { data, error } = await sb.from('penilaian')
     .select(`
       *,
-      siswa:siswa_id (id, nisn, nama, kelas, semester, kategori),
+      siswa:siswa_id (id, nisn, nama, kelas, semester, kategori, status_dikunci, jumlah_hafalan),
       penguji:penguji_id (id, nama, username),
       nilai_detail(*)
     `)
@@ -1889,7 +2105,7 @@ async function renderHome() {
 
   c.innerHTML = `
     <div class="page-header">
-      <h2><span class="material-symbols-outlined" style="font-size:24px">dashboard</span> Dashboard</h2>
+      <h2>Beranda</h2>
       <p>Assalamu'alaikum, <strong>${isAdmin ? '' : 'Ustadz '}${escapeHtml(STATE.user.nama || STATE.user.username)}</strong> ${isAdmin ? '<span class="badge badge-admin" style="margin-left:4px">ADMIN</span>' : (STATE.user.role === 'ketua_tahfidz' ? '<span class="badge badge-green" style="margin-left:4px">Ketua Tahfidz</span>' : '')}</p>
     </div>
 
@@ -1908,33 +2124,6 @@ async function renderHome() {
       </div>
     ` : ''}
 
-    ${!isAdmin ? `
-      <div class="card">
-        <div class="card-title">
-          <span class="material-symbols-outlined" style="font-size:15px">rocket_launch</span> Aksi Cepat
-        </div>
-        <button class="btn btn-primary btn-full" onclick="showPage('tugas')">
-          <span class="material-symbols-outlined" style="font-size:17px">edit_note</span>
-          Input Penilaian Siswa
-        </button>
-      </div>
-    ` : `
-      <div class="card">
-        <div class="card-title">
-          <span class="material-symbols-outlined" style="font-size:15px">rocket_launch</span> Aksi Cepat
-        </div>
-        <div class="grid-2" style="gap:8px">
-          <button class="btn btn-accent btn-full btn-sm" onclick="showPage('penguji')">
-            <span class="material-symbols-outlined" style="font-size:15px">groups</span>
-            Kelola Penguji
-          </button>
-          <button class="btn btn-accent btn-full btn-sm" onclick="showPage('siswa')">
-            <span class="material-symbols-outlined" style="font-size:15px">school</span>
-            Kelola Siswa
-          </button>
-        </div>
-      </div>
-    `}
   `;
 
   // Load live count
@@ -2688,7 +2877,7 @@ async function renderProgressPerPenguji() {
                 <div class="flex-row flex-between" style="margin-bottom:6px">
                   <div style="flex:1;min-width:0">
                     <div style="font-weight:700;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">
-                      ${p.role === 'admin' ? '👑' : '📖'} ${escapeHtml(p.nama)}
+                      ${escapeHtml(p.nama)}
                     </div>
                     <div class="text-small text-muted" style="font-size:11px;margin-top:2px">
                       ${p.selesai}/${p.total} siswa · ${p.belum} belum dinilai
@@ -2718,146 +2907,252 @@ async function renderProgressPerPenguji() {
 }
 
 // ═════════════════════════════════════════════════════════════════
-// HALAMAN: PENILAIAN (list siswa yang ditugaskan)
+// HALAMAN PENGUJI: DAFTAR SANTRI (halaman pertama setelah login)
 // ═════════════════════════════════════════════════════════════════
-async function renderPenilaianList() {
+const DAFTAR = { tab: 'belum', q: '', data: [] };
+
+function ketSantri(s) {
+  if (!s || !s.status_dikunci) return 'Keterangan belum diisi';
+  if (getKategori(s) === 'TAHAP_IQRA') return "Iqra'";
+  return `Al-Qur'an · hafalan ${fmtJuz(s.jumlah_hafalan)} juz`;
+}
+
+async function renderDaftarSantri() {
   const c = document.getElementById('main-content');
-  const isAdmin = STATE.user.role === 'admin';
   c.innerHTML = `
-    <div class="page-header">
-      <h2><span class="material-symbols-outlined" style="font-size:24px">edit_note</span> ${isAdmin ? 'Input Penilaian' : 'Tugas Menilai'}</h2>
-      <p>${isAdmin ? 'Semua siswa yang ditugaskan' : 'Daftar siswa yang ditugaskan kepada Anda'}</p>
-    </div>
-
-    <div class="bobot-info">
-      <strong>📏 Sistem Penilaian</strong>
-      <div style="display:flex;gap:8px;margin-bottom:8px">
-        <span class="bobot-chip" style="background:#dbeafe;color:#1e40af;font-weight:700">Kualitas 70%</span>
-        <span class="bobot-chip" style="background:#fef3c7;color:#854d0e;font-weight:700">Kuantitas 30%</span>
-      </div>
-      <div style="font-size:11px;color:var(--primary-dark);margin-bottom:6px;font-weight:600">
-        ▸ Kualitas (per surah):
-      </div>
-      <div class="bobot-row" style="margin-bottom:8px">
-        <span class="bobot-chip">Kelancaran 30%</span>
-        <span class="bobot-chip">Tajwid 30%</span>
-        <span class="bobot-chip">Kekuatan 25%</span>
-        <span class="bobot-chip">Adab 15%</span>
-      </div>
-      <div style="font-size:11px;color:var(--primary-dark);margin-bottom:6px;font-weight:600">
-        ▸ Kuantitas (target per kategori siswa):
-      </div>
-      <div class="bobot-row">
-        <span class="bobot-chip">📚 Al-Qur'an Lanjut → Kls 7: 2 juz, Kls 8: 4 juz, Kls 9: 6 juz</span>
-        <span class="bobot-chip">📖 Al-Qur'an Pemula → 1 juz (Juz 30)</span>
-        <span class="bobot-chip">🔤 Tahap Iqra' → 22 surah (Ad-Dhuha s.d. An-Nas)</span>
-      </div>
-    </div>
-
-    <div id="penilaianBody"><div class="card"><div class="text-center" style="padding:30px"><div class="spinner"></div></div></div></div>
+    <div id="dsProgress"></div>
+    <label class="v-search">
+      <span class="material-symbols-outlined" aria-hidden="true">search</span>
+      <input type="text" id="dsCari" placeholder="Cari nama santri" aria-label="Cari nama santri"
+             value="${escapeHtml(DAFTAR.q)}" oninput="DAFTAR.q = this.value; renderDaftarSantriList()">
+    </label>
+    <div class="v-seg" id="dsTabs"></div>
+    <div id="dsList"><div class="text-center" style="padding:30px"><div class="spinner"></div></div></div>
   `;
-
   try {
-    const assignments = isAdmin
-      ? await fetchAllAssignmentWithSiswa()
-      : await fetchAssignmentForPenguji(STATE.user.id);
-
-    if (!assignments.length) {
-      document.getElementById('penilaianBody').innerHTML = `
-        <div class="alert alert-info">
-          <span class="material-symbols-outlined" style="font-size:16px">info</span>
-          <span>${isAdmin
-            ? 'Belum ada siswa yang ditugaskan ke penguji manapun. Masuk ke panel Admin → Assignment.'
-            : 'Belum ada siswa yang ditugaskan kepada Anda. Silakan hubungi admin.'}
-          </span>
-        </div>
-      `;
-      return;
-    }
-
-    // Kelompokkan berdasarkan kelas (untuk filter), sembunyikan kelas yang diarsipkan
-    const kelasSet = [...new Set(assignments.map(a => a.siswa?.kelas).filter(Boolean))].sort();
-    const kelasAktif = kelasSet.filter(k => !STATE.kelasArsip.includes(k));
-
-    const filterHtml = `
-      <div class="filter-bar">
-        <button class="filter-chip ${STATE.filter.status === 'all' ? 'active' : ''}" onclick="STATE.filter.status='all'; renderPenilaianList()">Semua</button>
-        <button class="filter-chip ${STATE.filter.status === 'belum' ? 'active' : ''}" onclick="STATE.filter.status='belum'; renderPenilaianList()">Belum Dinilai</button>
-        <button class="filter-chip ${STATE.filter.status === 'selesai' ? 'active' : ''}" onclick="STATE.filter.status='selesai'; renderPenilaianList()">Selesai</button>
-        ${kelasAktif.map(k => `
-          <button class="filter-chip ${STATE.filter.kelas === k ? 'active' : ''}" onclick="STATE.filter.kelas='${escapeHtml(k)}'; renderPenilaianList()">${escapeHtml(k)}</button>
-        `).join('')}
-        ${STATE.filter.kelas !== 'all' ? `<button class="filter-chip active" onclick="STATE.filter.kelas='all'; renderPenilaianList()" style="background:#dc2626;border-color:#dc2626">✕ Kelas</button>` : ''}
-      </div>
-    `;
-
-    let filtered = assignments.filter(a => {
-      if (STATE.kelasArsip.includes(a.siswa?.kelas)) return false;
-      if (STATE.filter.status !== 'all' && a.status !== STATE.filter.status) return false;
-      if (STATE.filter.kelas !== 'all' && a.siswa?.kelas !== STATE.filter.kelas) return false;
-      return true;
-    });
-
-    const body = filtered.length ? filtered.map(a => {
-      const s = a.siswa || {};
-      const isSelesai = a.status === 'selesai';
-      return `
-        <div class="list-item">
-          <div class="list-avatar">${isSelesai ? '✓' : '📖'}</div>
-          <div class="list-info">
-            <div class="list-name">${escapeHtml(s.nama || '-')}</div>
-            <div class="list-meta">
-              <span class="badge badge-blue">${escapeHtml(s.kelas || '-')}</span>
-              <span class="${getKategoriInfo(s.kategori).badge} badge">${getKategoriInfo(s.kategori).icon} ${getKategoriInfo(s.kategori).label}</span>
-              <span>${escapeHtml(s.semester || '')}</span>
-              ${a.penguji ? `<span class="badge badge-purple">${escapeHtml(a.penguji.nama)}</span>` : ''}
-              ${isSelesai
-                ? '<span class="badge badge-green">✓ Selesai</span>'
-                : '<span class="badge badge-orange">⏳ Belum</span>'}
-            </div>
-          </div>
-          <div class="list-actions">
-            <button class="btn-icon" title="${isSelesai ? 'Lihat/Edit' : 'Nilai'}"
-              onclick="openFormPenilaian('${a.siswa_id}', '${a.penguji_id}')">
-              <span class="material-symbols-outlined" style="font-size:16px">${isSelesai ? 'visibility' : 'edit'}</span>
-            </button>
-          </div>
-        </div>
-      `;
-    }).join('') : '<div class="empty-state"><div class="empty-icon">📭</div><p>Tidak ada data yang cocok dengan filter.</p></div>';
-
-    document.getElementById('penilaianBody').innerHTML = filterHtml + body;
+    const data = await fetchAssignmentForPenguji(STATE.user.id);
+    DAFTAR.data = data
+      .filter(a => a.siswa && !STATE.kelasArsip.includes(a.siswa.kelas))
+      .sort((a, b) => (a.siswa.kelas || '').localeCompare(b.siswa.kelas || '') || (a.siswa.nama || '').localeCompare(b.siswa.nama || ''));
+    renderDaftarSantriList();
   } catch (e) {
-    document.getElementById('penilaianBody').innerHTML = `
-      <div class="alert alert-danger">
-        <span class="material-symbols-outlined" style="font-size:15px">error</span>
-        <span>Gagal: ${escapeHtml(e.message)}</span>
-      </div>`;
+    document.getElementById('dsList').innerHTML =
+      `<div class="alert alert-danger"><span>Gagal memuat daftar santri: ${escapeHtml(e.message)}</span></div>`;
   }
 }
 
-// Untuk admin: ambil semua assignment dengan info siswa & penguji
-async function fetchAllAssignmentWithSiswa() {
-  const { data, error } = await sb.from('assignment')
-    .select(`
-      id, status, created_at, siswa_id, penguji_id,
-      siswa:siswa_id (id, nisn, nama, kelas, semester, kategori),
-      penguji:penguji_id (id, nama, username)
-    `)
-    .order('created_at', { ascending: false });
-  if (error) throw error;
-  return data || [];
+function renderDaftarSantriList() {
+  const all = DAFTAR.data;
+  const selesai = all.filter(a => a.status === 'selesai').length;
+  const belum = all.length - selesai;
+  const persen = all.length ? Math.round(selesai / all.length * 100) : 0;
+
+  const prog = document.getElementById('dsProgress');
+  if (!prog) return;
+  prog.innerHTML = all.length ? `
+    <div class="v-progress">
+      <div class="v-progress-row"><span>${selesai} dari ${all.length} santri selesai</span><span class="muted">${belum} lagi</span></div>
+      <div class="progress-bar"><div class="progress-fill" style="width:${persen}%"></div></div>
+    </div>` : '';
+
+  document.getElementById('dsTabs').innerHTML = `
+    <button class="${DAFTAR.tab === 'belum' ? 'on' : ''}" onclick="DAFTAR.tab='belum'; renderDaftarSantriList()">Belum dinilai · ${belum}</button>
+    <button class="${DAFTAR.tab === 'selesai' ? 'on' : ''}" onclick="DAFTAR.tab='selesai'; renderDaftarSantriList()">Selesai · ${selesai}</button>
+  `;
+
+  const needle = DAFTAR.q.toLowerCase().trim();
+  const rows = all.filter(a =>
+    (DAFTAR.tab === 'selesai') === (a.status === 'selesai') &&
+    (!needle || (a.siswa.nama || '').toLowerCase().includes(needle) || (a.siswa.kelas || '').toLowerCase().includes(needle))
+  );
+
+  let html;
+  if (!all.length) {
+    html = '<div class="v-empty">Belum ada santri yang ditugaskan kepada Anda. Silakan hubungi admin.</div>';
+  } else if (!rows.length) {
+    html = `<div class="v-empty">${needle ? 'Tidak ada santri yang cocok.' : (DAFTAR.tab === 'belum' ? 'Semua santri sudah dinilai.' : 'Belum ada santri yang selesai dinilai.')}</div>`;
+  } else {
+    html = rows.map(a => `
+      <button class="v-row" onclick="bukaSantri('${a.siswa_id}', '${a.penguji_id}', 'home')">
+        <span class="v-kelas">${escapeHtml(a.siswa.kelas || '-')}</span>
+        <span class="v-row-info">
+          <span class="v-row-nama">${escapeHtml(a.siswa.nama || '-')}</span>
+          <span class="v-row-ket">${escapeHtml(ketSantri(a.siswa))}</span>
+        </span>
+        <span class="material-symbols-outlined" aria-hidden="true">chevron_right</span>
+      </button>`).join('');
+  }
+  document.getElementById('dsList').innerHTML = html;
+}
+
+// Buka santri: kalau statusnya belum dikunci → layar Keterangan dulu, kalau sudah → langsung isi nilai
+async function bukaSantri(siswaId, pengujiId, asal) {
+  showLoading('Memuat...');
+  try {
+    const { data: siswa, error } = await sb.from('siswa').select('*').eq('id', siswaId).single();
+    if (error) throw error;
+    hideLoading();
+    if (!siswa.status_dikunci) {
+      KET_STATE = { siswa, pengujiId, asal: asal || 'home', juz: Number(siswa.jumlah_hafalan) || 0 };
+      renderKeterangan();
+    } else {
+      openFormPenilaian(siswaId, pengujiId, asal);
+    }
+  } catch (e) {
+    hideLoading();
+    showToast('❌ Gagal: ' + pesanError(e));
+  }
 }
 
 // ═════════════════════════════════════════════════════════════════
-// FORM PENILAIAN (input nilai per siswa)
+// KETERANGAN SANTRI: status (Iqra' / Al-Qur'an) + jumlah hafalan
+// Status dikunci lewat konfirmasi supaya tidak terganti tanpa sengaja.
 // ═════════════════════════════════════════════════════════════════
-let FORM_STATE = null; // menyimpan state form yang sedang aktif
+let KET_STATE = null; // { siswa, pengujiId, asal, juz }
 
-async function openFormPenilaian(siswaId, pengujiId) {
-  showLoading('Memuat data siswa...');
+function renderKeterangan() {
+  const { siswa } = KET_STATE;
+  const terkunci = !!siswa.status_dikunci;
+  const kat = getKategori(siswa);
+  const iqra = terkunci && kat === 'TAHAP_IQRA';
+  const quran = terkunci && kat !== 'TAHAP_IQRA';
+  const cls = (aktif) => 'v-status' + (aktif ? ' on' : (terkunci ? ' off' : ''));
+
+  document.body.classList.add('mode-form');
+  document.getElementById('main-content').innerHTML = `
+    <div class="v-formhead">
+      <button class="v-back" aria-label="Kembali" onclick="showPage('${KET_STATE.asal}')">
+        <span class="material-symbols-outlined">arrow_back</span>
+      </button>
+      <div class="v-formhead-info">
+        <div class="v-title">${escapeHtml(siswa.nama)}</div>
+        <div class="v-sub">Kelas ${escapeHtml(siswa.kelas || '-')}</div>
+      </div>
+    </div>
+
+    <div class="v-section">
+      <div class="v-section-head">
+        <span>Status santri</span>
+        ${terkunci ? `<button class="v-link" onclick="bukaKunciStatus()">
+          <span class="material-symbols-outlined" style="font-size:16px">lock</span> Terkunci · buka kunci</button>` : ''}
+      </div>
+      <div class="v-status-grid">
+        <button class="${cls(iqra)}" aria-pressed="${iqra}" onclick="pilihStatus('TAHAP_IQRA')">
+          <b>Iqra'</b><span>Belum Al-Qur'an</span>
+        </button>
+        <button class="${cls(quran)}" aria-pressed="${quran}" onclick="pilihStatus('ALQURAN_LANJUT')">
+          <b>Al-Qur'an</b><span>Sudah membaca mushaf</span>
+        </button>
+      </div>
+      ${terkunci ? '' : '<p class="v-hint">Pilih salah satu. Anda akan diminta mengunci pilihan supaya tidak terganti tanpa sengaja.</p>'}
+    </div>
+
+    ${quran ? `
+      <div class="v-section">
+        <div class="v-section-head"><span>Jumlah hafalan selama ini</span></div>
+        <div class="v-stepper">
+          <button aria-label="Kurangi" onclick="ubahJumlahHafalan(-0.5)">−</button>
+          <div><b id="ketJuz">${fmtJuz(KET_STATE.juz)}</b><span>juz</span></div>
+          <button aria-label="Tambah" onclick="ubahJumlahHafalan(0.5)">+</button>
+        </div>
+      </div>` : ''}
+
+    ${terkunci ? `
+      <div class="v-footer"><div class="v-footer-inner">
+        <button class="btn btn-primary btn-full" onclick="mulaiMenilai()">Mulai menilai</button>
+      </div></div>` : ''}
+  `;
+}
+
+function ubahJumlahHafalan(delta) {
+  KET_STATE.juz = Math.min(30, Math.max(0, KET_STATE.juz + delta));
+  document.getElementById('ketJuz').textContent = fmtJuz(KET_STATE.juz);
+}
+
+function pilihStatus(kategori) {
+  const { siswa, pengujiId } = KET_STATE;
+  if (siswa.status_dikunci) return; // sudah terkunci — harus buka kunci dulu
+  const label = getKategoriInfo(kategori).label;
+  showConfirm(
+    `Kunci status: ${label}?`,
+    `${siswa.nama} (${siswa.kelas || '-'}) akan dinilai sebagai santri ${label}. Status dikunci supaya tidak terganti tanpa sengaja. Anda masih bisa membuka kuncinya bila keliru.`,
+    async () => {
+      showLoading('Menyimpan...');
+      try {
+        const berubah = getKategori(siswa) !== kategori;
+        const { error } = await sb.from('siswa')
+          .update({ kategori, status_dikunci: true }).eq('id', siswa.id);
+        if (error) throw error;
+        // Status berganti padahal sudah ada nilai → nilai lama harus disimpan ulang dengan cara hitung baru
+        if (berubah) {
+          const { data: pen } = await sb.from('penilaian').select('id').eq('siswa_id', siswa.id).eq('penguji_id', pengujiId).maybeSingle();
+          if (pen) {
+            const { error: eAs } = await sb.from('assignment').update({ status: 'belum' })
+              .eq('siswa_id', siswa.id).eq('penguji_id', pengujiId);
+            if (eAs) throw eAs;
+            showToast('⚠️ Status berubah. Nilai lama perlu diperiksa dan disimpan ulang.', 5000);
+          }
+        }
+        siswa.kategori = kategori;
+        siswa.status_dikunci = true;
+        hideLoading();
+        renderKeterangan();
+      } catch (e) {
+        hideLoading();
+        showToast('❌ ' + pesanError(e));
+      }
+    },
+    '🔒', 'Ya, kunci', 'btn-primary'
+  );
+}
+
+function bukaKunciStatus() {
+  const { siswa } = KET_STATE;
+  showConfirm(
+    'Buka kunci status?',
+    `Status ${siswa.nama} bisa dipilih ulang. Bila statusnya diganti, nilai yang sudah diisi perlu disimpan ulang.`,
+    async () => {
+      showLoading('Menyimpan...');
+      try {
+        const { error } = await sb.from('siswa').update({ status_dikunci: false }).eq('id', siswa.id);
+        if (error) throw error;
+        siswa.status_dikunci = false;
+        hideLoading();
+        renderKeterangan();
+      } catch (e) {
+        hideLoading();
+        showToast('❌ ' + pesanError(e));
+      }
+    },
+    '🔓', 'Ya, buka', 'btn-primary'
+  );
+}
+
+async function mulaiMenilai() {
+  const { siswa, pengujiId, asal, juz } = KET_STATE;
+  if (getKategori(siswa) !== 'TAHAP_IQRA' && Number(siswa.jumlah_hafalan || 0) !== juz) {
+    showLoading('Menyimpan...');
+    const { error } = await sb.from('siswa').update({ jumlah_hafalan: juz }).eq('id', siswa.id);
+    hideLoading();
+    if (error) return showToast('❌ ' + pesanError(error));
+  }
+  openFormPenilaian(siswa.id, pengujiId, asal);
+}
+
+// ═════════════════════════════════════════════════════════════════
+// FORM PENILAIAN
+// - Al-Qur'an : cari surah → kartu nilai per surah
+// - Iqra'     : nilai membaca (3 aspek); nilai hafalan hanya bila diaktifkan penguji
+// ═════════════════════════════════════════════════════════════════
+let FORM_STATE = null;
+const ASPEK = [
+  ['kelancaran', 'Lancar'], ['tajwid', 'Tajwid'], ['kekuatan_hafalan', 'Hafalan'], ['adab_tartil', 'Adab']
+];
+const ASPEK_BACA = [['lancar', 'Lancar'], ['tajwid', 'Tajwid'], ['adab', 'Adab']];
+
+async function openFormPenilaian(siswaId, pengujiId, asal) {
+  showLoading('Memuat data santri...');
   try {
-    // Ambil data siswa, penguji, surah aktif secara parallel
     const [siswaRes, pengujiRes, surahRes] = await Promise.all([
       sb.from('siswa').select('*').eq('id', siswaId).single(),
       sb.from('penguji').select('id, nama, username').eq('id', pengujiId).single(),
@@ -2867,721 +3162,415 @@ async function openFormPenilaian(siswaId, pengujiId) {
     if (pengujiRes.error) throw pengujiRes.error;
     if (surahRes.error) throw surahRes.error;
     const siswa = siswaRes.data;
-    const penguji = pengujiRes.data;
     STATE.cache.surah = surahRes.data || [];
 
-    // Cek apakah sudah ada penilaian
     const existing = await fetchPenilaianBySiswaPenguji(siswaId, pengujiId);
+    const baris = (existing?.nilai_detail || []).map(n => ({
+      surah_nama: n.surah_nama,
+      kelancaran: n.kelancaran, tajwid: n.tajwid,
+      kekuatan_hafalan: n.kekuatan_hafalan, adab_tartil: n.adab_tartil
+    })).sort((a, b) => nomorSurah(a.surah_nama) - nomorSurah(b.surah_nama));
 
-    const barisInit = existing?.nilai_detail?.length
-        ? existing.nilai_detail
-            .sort((a,b) => (a.urutan||0) - (b.urutan||0))
-            .map(n => ({
-              id: n.id,
-              surah_nama: n.surah_nama,
-              kelancaran: n.kelancaran,
-              tajwid: n.tajwid,
-              kekuatan_hafalan: n.kekuatan_hafalan,
-              adab_tartil: n.adab_tartil
-            }))
-        : [{ id: null, surah_nama: '', kelancaran: '', tajwid: '', kekuatan_hafalan: '', adab_tartil: '' }];
+    const iqra = getKategori(siswa) === 'TAHAP_IQRA';
+    const hafalanAktif = iqra ? !!existing?.hafalan_aktif : true;
 
-    // Deteksi: kalau edit mode + nilai juz tersimpan beda > 0.05 dengan hasil auto-hitung,
-    // asumsikan dulu di-override manual oleh admin. Admin bisa nonaktifkan checkbox
-    // untuk kembali ke mode auto.
-    let autoOverride = false;
-    if (existing?.jumlah_juz != null && STATE.user.role === 'admin') {
-      const kat = getKategori(siswa);
-      let autoVal;
-      if (kat === 'TAHAP_IQRA') {
-        autoVal = hitungKuantitasIqra(barisInit).count;
-      } else if (kat === 'ALQURAN_PEMULA') {
-        autoVal = hitungKuantitasPemula(barisInit).totalJuz;
-      } else {
-        autoVal = hitungJuzOtomatis(barisInit, getAmbangSetoran(kat)).totalJuz;
-      }
-      if (Math.abs(Number(existing.jumlah_juz) - autoVal) > 0.05) {
-        autoOverride = true;
-      }
+    // Admin: kalau jumlah juz tersimpan berbeda dari hitungan otomatis, anggap dulu di-override manual
+    let override = false;
+    if (existing?.jumlah_juz != null && STATE.user.role === 'admin' && hafalanAktif && baris.length) {
+      const auto = hitungJuzOtomatis(baris.filter(barisLengkap)).totalJuz;
+      override = Math.abs(Number(existing.jumlah_juz) - auto) > 0.05;
     }
 
     FORM_STATE = {
-      siswa, penguji,
+      siswa, penguji: pengujiRes.data, asal: asal || 'home',
       penilaianId: existing?.id || null,
       tanggal: existing?.tanggal_ujian || todayLocal(),
       catatan: existing?.catatan || '',
-      jumlah_juz: existing?.jumlah_juz ?? '',
-      juzManualOverride: autoOverride,  // auto-detect dari data lama
-      baris: barisInit
+      baris, aktif: -1,
+      baca: {
+        lancar: existing?.baca_lancar ?? '',
+        tajwid: existing?.baca_tajwid ?? '',
+        adab: existing?.baca_adab ?? ''
+      },
+      hafalanAktif,
+      juzManualOverride: override,
+      jumlah_juz: override ? Number(existing.jumlah_juz) : ''
     };
-
     hideLoading();
     renderFormPenilaian();
   } catch (e) {
     hideLoading();
-    showToast('❌ Gagal: ' + e.message);
+    showToast('❌ Gagal: ' + pesanError(e));
   }
+}
+
+function tutupForm() {
+  showPage(FORM_STATE?.asal || 'home');
+}
+
+function bukaKeteranganDariForm() {
+  const fs = FORM_STATE;
+  KET_STATE = { siswa: fs.siswa, pengujiId: fs.penguji.id, asal: fs.asal, juz: Number(fs.siswa.jumlah_hafalan) || 0 };
+  renderKeterangan();
 }
 
 function renderFormPenilaian() {
   const fs = FORM_STATE;
-  const c = document.getElementById('main-content');
   const s = fs.siswa;
-  const isEdit = !!fs.penilaianId;
-  const isAdminUser = STATE.user.role === 'admin';
+  const iqra = getKategori(s) === 'TAHAP_IQRA';
+  const isAdmin = STATE.user.role === 'admin';
 
-  c.innerHTML = `
-    <div class="page-header">
-      <h2>
-        <button class="btn-icon" onclick="showPage('penilaian')" style="margin-right:2px">
-          <span class="material-symbols-outlined" style="font-size:16px">arrow_back</span>
-        </button>
-        ${isEdit ? 'Edit Penilaian' : 'Form Penilaian'}
-      </h2>
-      <p>${isEdit ? 'Perbarui nilai ujian tahfidz' : 'Input nilai ujian tahfidz'}</p>
-    </div>
-
-    <!-- Data Siswa (otomatis, readonly) -->
-    <div class="card">
-      <div class="card-title">
-        <span class="material-symbols-outlined" style="font-size:15px">person</span>
-        Data Siswa
-      </div>
-      <div class="grid-2">
-        <div class="form-group">
-          <label>Nama</label>
-          <input type="text" value="${escapeHtml(s.nama)}" disabled>
-        </div>
-        <div class="form-group">
-          <label>NISN</label>
-          <input type="text" value="${escapeHtml(s.nisn || '-')}" disabled>
-        </div>
-        <div class="form-group">
-          <label>Kelas</label>
-          <input type="text" value="${escapeHtml(s.kelas || '-')}" disabled>
-        </div>
-        <div class="form-group">
-          <label>Semester</label>
-          <input type="text" value="${escapeHtml(s.semester || '-')}" disabled>
-        </div>
-      </div>
-      <div class="form-group">
-        <label>Penguji</label>
-        <input type="text" value="${escapeHtml(fs.penguji.nama)}" disabled>
-      </div>
-    </div>
-
-    <!-- Bobot Info -->
-    <div class="bobot-info">
-      <strong>📏 Sistem Penilaian</strong>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:6px">
-        <span class="bobot-chip" style="background:#dbeafe;color:#1e40af;font-weight:700">Kualitas 70%</span>
-        <span class="bobot-chip" style="background:#fef3c7;color:#854d0e;font-weight:700">Kuantitas 30%</span>
-        <span class="bobot-chip" style="background:white;font-weight:700">${getKategoriInfo(s.kategori).icon} ${getKategoriInfo(s.kategori).label}</span>
-      </div>
-      <div style="font-size:11px;color:var(--primary-dark);opacity:.85">
-        Target Kuantitas: <strong>${getTargetKuantitasLabel(s)}</strong>
-      </div>
-    </div>
-
-    <!-- Tanggal & Catatan -->
-    <div class="card">
-      <div class="card-title">
-        <span class="material-symbols-outlined" style="font-size:15px">event</span>
-        Detail Ujian
-      </div>
-      <div class="form-group">
-        <label>Tanggal Ujian</label>
-        <input type="date" id="fTanggal" value="${fs.tanggal}">
-      </div>
-      <div class="form-group">
-        <label>Catatan <span class="hint">(opsional)</span></label>
-        <textarea id="fCatatan" placeholder="Catatan penguji...">${escapeHtml(fs.catatan || '')}</textarea>
-      </div>
-    </div>
-
-    <!-- KUALITAS (Tabel nilai per surah) — Input utama oleh penguji -->
-    <div class="card" style="border-left:4px solid #2563eb">
-      <div class="card-title" style="color:var(--primary-dark)">
-        <span class="material-symbols-outlined" style="font-size:15px">library_books</span>
-        KUALITAS · Nilai per Surah <span style="font-size:10px;background:#dbeafe;color:#1e40af;padding:2px 8px;border-radius:999px;margin-left:4px">Bobot 70%</span>
-      </div>
-      <p class="text-small text-muted" style="margin-bottom:10px">
-        Nilai 1–100. Tambah baris untuk tiap surah yang diujikan.
-      </p>
-      <div class="nilai-table-wrap">
-        <table class="nilai-table" id="tbNilai">
-          <thead>
-            <tr>
-              <th style="min-width:120px">Surah</th>
-              <th>Kelancaran<br><span style="font-weight:400;opacity:.8">(30%)</span></th>
-              <th>Tajwid<br><span style="font-weight:400;opacity:.8">(30%)</span></th>
-              <th>Kekuatan<br><span style="font-weight:400;opacity:.8">(25%)</span></th>
-              <th>Adab<br><span style="font-weight:400;opacity:.8">(15%)</span></th>
-              <th>Total</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody id="tbNilaiBody"></tbody>
-        </table>
-      </div>
-      <button class="btn btn-outline btn-full mt-3" onclick="tambahBarisNilai()">
-        <span class="material-symbols-outlined" style="font-size:15px">add</span>
-        Tambah Surah
+  document.body.classList.add('mode-form');
+  document.getElementById('main-content').innerHTML = `
+    <div class="v-formhead">
+      <button class="v-back" aria-label="Kembali" onclick="tutupForm()">
+        <span class="material-symbols-outlined">arrow_back</span>
       </button>
-
-      <div id="rataRataBox" style="margin-top:14px"></div>
+      <div class="v-formhead-info">
+        <div class="v-title">${escapeHtml(s.nama)}</div>
+        <button class="v-sub v-sub-btn" onclick="bukaKeteranganDariForm()" title="Lihat keterangan santri">
+          ${escapeHtml(s.kelas || '-')} · ${escapeHtml(iqra ? "Iqra'" : `Al-Qur'an · hafalan ${fmtJuz(s.jumlah_hafalan)} juz`)}
+          <span class="material-symbols-outlined" style="font-size:14px">lock</span>
+        </button>
+      </div>
     </div>
 
-    <!-- KUANTITAS (auto dihitung dari surah yang disetorkan, logika per kategori) -->
-    <div class="card" style="border-left:4px solid #d97706">
-      <div class="card-title" style="color:#854d0e">
-        <span class="material-symbols-outlined" style="font-size:15px">menu_book</span>
-        KUANTITAS <span style="font-size:10px;background:#fef3c7;color:#854d0e;padding:2px 8px;border-radius:999px;margin-left:4px">Bobot 30%</span>
+    ${iqra ? `
+      <div class="v-card">
+        <div class="v-card-head"><div class="v-card-nama">Nilai membaca</div><span class="v-total" id="totBaca"></span></div>
+        <div class="v-grid3">
+          ${ASPEK_BACA.map(([f, label]) => `
+            <label>${label}
+              <input type="number" inputmode="numeric" min="0" max="100" value="${fs.baca[f] ?? ''}"
+                     oninput="isiBaca('${f}', this.value)">
+            </label>`).join('')}
+        </div>
       </div>
-      <p class="text-small text-muted" style="margin-bottom:10px">
-        Target: <strong>${getTargetKuantitasLabel(s)}</strong>
-      </p>
-      ${isAdminUser ? `
-        <!-- Admin boleh override manual -->
-        <div class="form-group">
-          <label>
-            <span style="display:flex;align-items:center;gap:6px">
-              <input type="checkbox" id="fJuzManual" ${FORM_STATE.juzManualOverride ? 'checked' : ''}
-                     onchange="toggleJuzManual(this.checked)"
-                     style="width:14px;height:14px;accent-color:var(--primary)">
-              <span>Override manual (admin)</span>
-            </span>
+      <div class="v-card v-switch-row">
+        <label for="swHafalan" class="v-card-nama" style="margin:0;cursor:pointer">Munculkan nilai hafalan</label>
+        <input type="checkbox" id="swHafalan" class="v-switch" role="switch" ${fs.hafalanAktif ? 'checked' : ''}
+               onchange="toggleHafalan(this.checked)">
+      </div>` : ''}
+
+    <div id="blokSurah" style="${fs.hafalanAktif ? '' : 'display:none'}">
+      <label class="v-search v-search-strong">
+        <span class="material-symbols-outlined" aria-hidden="true">search</span>
+        <input type="text" id="cariSurah" placeholder="Cari surah: nama atau nomor" aria-label="Cari surah"
+               autocomplete="off" oninput="renderHasilCari(this.value)">
+      </label>
+      <div id="hasilCari"></div>
+      <div id="surahCards"></div>
+      ${isAdmin ? `
+        <div class="v-admin-override">
+          <label style="display:flex;align-items:center;gap:8px;margin:0">
+            <input type="checkbox" id="fJuzManual" ${fs.juzManualOverride ? 'checked' : ''}
+                   onchange="toggleJuzManual(this.checked)" style="width:16px;height:16px">
+            <span>Atur jumlah juz tersetor secara manual (admin)</span>
           </label>
-        </div>
-        <div id="fJuzManualInput" style="${FORM_STATE.juzManualOverride ? '' : 'display:none'}">
-          <div class="form-group">
-            ${getKategori(s) === 'TAHAP_IQRA'
-              ? `<label>Jumlah Surah Tersetor (manual) <span class="hint">(0–${SURAH_TARGET_IQRA.length})</span></label>
-                 <input type="number" id="fJuz" min="0" max="${SURAH_TARGET_IQRA.length}" step="1" value="${fs.jumlah_juz || ''}"
-                        placeholder="Contoh: 15" oninput="updateNilaiKuantitasManual(this.value)">`
-              : getKategori(s) === 'ALQURAN_PEMULA'
-              ? `<label>Jumlah Juz-30 (manual) <span class="hint">(0–1, boleh pecahan)</span></label>
-                 <input type="number" id="fJuz" min="0" max="1" step="0.05" value="${fs.jumlah_juz || ''}"
-                        placeholder="Contoh: 0.75" oninput="updateNilaiKuantitasManual(this.value)">`
-              : `<label>Jumlah Juz (manual) <span class="hint">(boleh pecahan, misal 2.5)</span></label>
-                 <input type="number" id="fJuz" min="0" max="30" step="0.25" value="${fs.jumlah_juz || ''}"
-                        placeholder="Contoh: 2 atau 2.5" oninput="updateNilaiKuantitasManual(this.value)">`
-            }
-          </div>
-        </div>
-      ` : ''}
-      <div id="kuantitasBox"></div>
+          <input type="number" id="fJuz" min="0" max="30" step="0.25" value="${fs.jumlah_juz}"
+                 placeholder="Contoh: 2 atau 2.5" oninput="isiJuzManual(this.value)"
+                 style="margin-top:8px;${fs.juzManualOverride ? '' : 'display:none'}">
+        </div>` : ''}
     </div>
 
-    <!-- Ringkasan Nilai Akhir -->
-    <div id="nilaiAkhirBox"></div>
-
-    <!-- Action buttons -->
-    <div style="display:flex;flex-direction:column;gap:8px;margin-top:14px">
-      <button class="btn btn-primary btn-full" onclick="simpanPenilaian()">
-        <span class="material-symbols-outlined" style="font-size:17px">save</span>
-        ${isEdit ? 'Simpan Perubahan' : 'Simpan Penilaian'}
-      </button>
-      ${isEdit ? `
-        <button class="btn btn-outline btn-full" style="color:var(--danger);border-color:var(--danger)" onclick="hapusPenilaian()">
-          <span class="material-symbols-outlined" style="font-size:15px">delete</span>
-          Hapus Penilaian
-        </button>
-      ` : ''}
-      <button class="btn btn-outline btn-full" onclick="showPage('penilaian')">
-        <span class="material-symbols-outlined" style="font-size:15px">close</span>
-        Batal
-      </button>
+    <div id="catatanWrap" style="${fs.catatan ? '' : 'display:none'};margin-top:12px">
+      <textarea id="fCatatan" placeholder="Catatan penguji (opsional)" style="min-height:70px">${escapeHtml(fs.catatan)}</textarea>
     </div>
+
+    ${fs.penilaianId ? `
+      <button class="v-link v-link-danger" style="margin:16px auto 0" onclick="hapusPenilaian()">Hapus penilaian ini</button>` : ''}
+
+    <div class="v-footer"><div class="v-footer-inner">
+      <div class="v-footer-row">
+        <div class="v-footer-meta">
+          <input type="date" id="fTanggal" class="v-date" aria-label="Tanggal ujian" value="${fs.tanggal}">
+          <button class="v-link" onclick="toggleCatatan()">Catatan</button>
+        </div>
+        <div class="v-akhir"><span>NILAI AKHIR</span><b id="nilaiAkhirTeks">—</b></div>
+      </div>
+      <button class="btn btn-primary btn-full" onclick="simpanPenilaian()">Simpan penilaian</button>
+    </div></div>
   `;
-  renderBarisNilai();
-  // renderBarisNilai → updateRataRata → updateNilaiKuantitas (auto re-calc)
+  renderSurahCards();
+  updateFooter();
 }
 
-function renderBarisNilai() {
-  const surahList = STATE.cache.surah || [];
-  const tbody = document.getElementById('tbNilaiBody');
-  tbody.innerHTML = FORM_STATE.baris.map((b, idx) => {
-    const total = hitungTotal(b);
-    // Build options: jika nilai tersimpan tidak ada di daftar aktif, tetap tampilkan sebagai opsi terpilih
-    const inList = surahList.some(s => s.nama === b.surah_nama);
-    const options = ['<option value="">— Pilih surah —</option>']
-      .concat(surahList.map(s =>
-        `<option value="${escapeHtml(s.nama)}" ${s.nama === b.surah_nama ? 'selected' : ''}>${s.nomor}. ${escapeHtml(s.nama)}</option>`
-      ));
-    if (b.surah_nama && !inList) {
-      options.push(`<option value="${escapeHtml(b.surah_nama)}" selected>${escapeHtml(b.surah_nama)} (nonaktif)</option>`);
-    }
-    return `
-      <tr data-idx="${idx}">
-        <td>
-          <select onchange="updateBaris(${idx}, 'surah_nama', this.value)" style="min-width:130px">
-            ${options.join('')}
-          </select>
-        </td>
-        <td><input type="number" min="0" max="100" step="0.01" value="${b.kelancaran}" oninput="updateBaris(${idx}, 'kelancaran', this.value)"></td>
-        <td><input type="number" min="0" max="100" step="0.01" value="${b.tajwid}" oninput="updateBaris(${idx}, 'tajwid', this.value)"></td>
-        <td><input type="number" min="0" max="100" step="0.01" value="${b.kekuatan_hafalan}" oninput="updateBaris(${idx}, 'kekuatan_hafalan', this.value)"></td>
-        <td><input type="number" min="0" max="100" step="0.01" value="${b.adab_tartil}" oninput="updateBaris(${idx}, 'adab_tartil', this.value)"></td>
-        <td class="total-cell" style="color:${warnaNilai(total)}">${total.toFixed(2)}</td>
-        <td>
-          <button class="btn-icon danger" onclick="hapusBarisNilai(${idx})" title="Hapus">
-            <span class="material-symbols-outlined" style="font-size:14px">delete</span>
+function toggleCatatan() {
+  const w = document.getElementById('catatanWrap');
+  const tampil = w.style.display === 'none';
+  w.style.display = tampil ? '' : 'none';
+  if (tampil) document.getElementById('fCatatan').focus();
+}
+
+// ── Pencarian surah: hanya menampilkan surah yang belum dipilih ──
+function renderHasilCari(q) {
+  const box = document.getElementById('hasilCari');
+  const raw = String(q || '').trim().toLowerCase();
+  if (!raw) { box.innerHTML = ''; return; }
+  const norm = t => String(t).toLowerCase().replace(/[^a-z0-9]/g, '');
+  const kata = norm(raw);
+  const angka = /^\d+$/.test(raw);
+  const dipilih = new Set(FORM_STATE.baris.map(b => b.surah_nama));
+  const cocok = (STATE.cache.surah || [])
+    .filter(s => !dipilih.has(s.nama))
+    .filter(s => angka ? String(s.nomor).startsWith(raw) : norm(s.nama).includes(kata))
+    .sort((a, b) => angka ? (String(a.nomor).length - String(b.nomor).length || a.nomor - b.nomor) : a.nomor - b.nomor)
+    .slice(0, 6);
+  box.innerHTML = cocok.length
+    ? `<div class="v-hasil">${cocok.map(s =>
+        `<button onclick="pilihSurah(${s.nomor})">${s.nomor}. ${escapeHtml(s.nama)}</button>`).join('')}</div>`
+    : '<p class="v-hint">Surah tidak ditemukan atau sudah dipilih.</p>';
+}
+
+function pilihSurah(nomor) {
+  const s = (STATE.cache.surah || []).find(x => x.nomor === nomor);
+  if (!s || FORM_STATE.baris.some(b => b.surah_nama === s.nama)) return;
+  FORM_STATE.baris.push({ surah_nama: s.nama, kelancaran: '', tajwid: '', kekuatan_hafalan: '', adab_tartil: '' });
+  // Selalu tersusun menurut urutan surah, jadi tidak ada sela walau penguji melompat
+  FORM_STATE.baris.sort((a, b) => nomorSurah(a.surah_nama) - nomorSurah(b.surah_nama));
+  FORM_STATE.aktif = FORM_STATE.baris.findIndex(b => b.surah_nama === s.nama);
+  const cari = document.getElementById('cariSurah');
+  cari.value = '';
+  document.getElementById('hasilCari').innerHTML = '';
+  renderSurahCards();
+  const input = document.querySelector(`#surahCards .v-card[data-i="${FORM_STATE.aktif}"] input`);
+  if (input) input.focus();
+}
+
+function renderSurahCards() {
+  const fs = FORM_STATE;
+  const box = document.getElementById('surahCards');
+  if (!box) return;
+  if (!fs.baris.length) {
+    box.innerHTML = '<div class="v-empty">Belum ada surah. Cari surah di atas untuk mulai menilai.</div>';
+    return;
+  }
+  box.innerHTML = fs.baris.map((b, i) => `
+    <div class="v-card${i === fs.aktif ? ' aktif' : ''}" data-i="${i}" onclick="aktifkanSurah(${i})">
+      <div class="v-card-head">
+        <div class="v-card-nama">${nomorSurah(b.surah_nama)}. ${escapeHtml(b.surah_nama)}<span class="v-juz" id="juz-${i}"></span></div>
+        <div class="v-card-right">
+          <span class="v-total" id="tot-${i}"></span>
+          <button class="v-x" aria-label="Hapus surah ${escapeHtml(b.surah_nama)}" onclick="event.stopPropagation(); hapusSurah(${i})">
+            <span class="material-symbols-outlined" style="font-size:18px">close</span>
           </button>
-        </td>
-      </tr>
-    `;
-  }).join('');
-  updateRataRata();
-}
-
-function updateBaris(idx, field, val) {
-  if (field === 'surah_nama') {
-    FORM_STATE.baris[idx][field] = val;
-  } else {
-    // angka
-    const n = val === '' ? '' : Number(val);
-    FORM_STATE.baris[idx][field] = n;
-    // update sel total di baris itu saja (tanpa redraw semua)
-    const tr = document.querySelector(`#tbNilaiBody tr[data-idx="${idx}"]`);
-    if (tr) {
-      const total = hitungTotal(FORM_STATE.baris[idx]);
-      const totalCell = tr.querySelector('.total-cell');
-      totalCell.textContent = total.toFixed(2);
-      totalCell.style.color = warnaNilai(total);
-    }
-    updateRataRata();
-  }
-}
-
-function tambahBarisNilai() {
-  let nextSurahNama = '';
-  const baris = FORM_STATE.baris;
-  if (baris.length > 0) {
-    const lastSurahNama = baris[baris.length - 1].surah_nama;
-    if (lastSurahNama) {
-      const surahList = STATE.cache.surah || [];
-      const lastSurah = surahList.find(s => s.nama === lastSurahNama);
-      if (lastSurah) {
-        const nextSurah = surahList.find(s => s.nomor === lastSurah.nomor + 1);
-        if (nextSurah) nextSurahNama = nextSurah.nama;
-      }
-    }
-  }
-  FORM_STATE.baris.push({ id: null, surah_nama: nextSurahNama, kelancaran: '', tajwid: '', kekuatan_hafalan: '', adab_tartil: '' });
-  renderBarisNilai();
-}
-
-function hapusBarisNilai(idx) {
-  if (FORM_STATE.baris.length === 1) {
-    showToast('⚠️ Minimal 1 baris surah');
-    return;
-  }
-  FORM_STATE.baris.splice(idx, 1);
-  renderBarisNilai();
-}
-
-function updateRataRata() {
-  const baris = FORM_STATE.baris.filter(b => b.surah_nama && b.kelancaran !== '' && b.tajwid !== '' && b.kekuatan_hafalan !== '' && b.adab_tartil !== '');
-  const box = document.getElementById('rataRataBox');
-  if (!baris.length) {
-    box.innerHTML = '';
-    updateNilaiKuantitas(); // recompute kuantitas (jadi 0)
-    return;
-  }
-  const totals = baris.map(b => hitungTotal(b));
-  const rata = totals.reduce((a,b)=>a+b,0) / totals.length;
-  const max = Math.max(...totals);
-  const min = Math.min(...totals);
-  box.innerHTML = `
-    <div class="alert alert-info" style="background:#dbeafe;color:#1e40af;border-color:#93c5fd">
-      <span class="material-symbols-outlined" style="font-size:17px">library_books</span>
-      <div style="flex:1">
-        <div style="font-weight:800;font-size:14px;margin-bottom:4px">
-          Nilai Kualitas: ${rata.toFixed(2)}
-          <span class="badge" style="margin-left:6px;background:#1e40af;color:white">${predikat(rata)}</span>
-        </div>
-        <div class="text-small">
-          ${baris.length} surah · Tertinggi ${max.toFixed(2)} · Terendah ${min.toFixed(2)}
         </div>
       </div>
-    </div>
-  `;
-  // Setiap ada perubahan nilai surah, kuantitas harus ikut di-recalc
-  updateNilaiKuantitas();
+      <div class="v-grid4">
+        ${ASPEK.map(([f, label]) => `
+          <label>${label}
+            <input type="number" inputmode="numeric" min="0" max="100" value="${b[f] ?? ''}"
+                   onfocus="aktifkanSurah(${i})" oninput="isiNilai(${i}, '${f}', this.value)">
+          </label>`).join('')}
+      </div>
+      <button class="v-salin" id="salin-${i}" style="display:none" onclick="event.stopPropagation(); salinSebelumnya(${i})"></button>
+    </div>`).join('');
+  fs.baris.forEach((_, i) => refreshKartu(i));
 }
 
-// Auto-calculate kuantitas dari surah tersetor (nilai per surah ≥ AMBANG_SETORAN)
-function updateNilaiKuantitas() {
-  const box = document.getElementById('kuantitasBox');
-  if (!box) return;
-  if (FORM_STATE.juzManualOverride) return renderKuantitasBoxManual();
-
-  const baris = FORM_STATE.baris.filter(b => b.surah_nama && b.kelancaran !== '' && b.tajwid !== '' && b.kekuatan_hafalan !== '' && b.adab_tartil !== '');
-  const siswa = FORM_STATE.siswa;
-  const kat = getKategori(siswa);
-
-  if (!baris.length) {
-    FORM_STATE.jumlah_juz = 0;
-    box.innerHTML = `
-      <div class="alert alert-info" style="background:#fef3c7;color:#854d0e;border-color:#fde68a">
-        <span class="material-symbols-outlined" style="font-size:17px">info</span>
-        <span>Isi nilai per surah terlebih dahulu. Target: <strong>${getTargetKuantitasLabel(siswa)}</strong></span>
-      </div>
-    `;
-    updateNilaiAkhir();
-    return;
-  }
-
-  if (kat === 'TAHAP_IQRA') {
-    const hasil = hitungKuantitasIqra(baris);
-    FORM_STATE.jumlah_juz = hasil.count;
-    const nilaiKuantitas = Math.min(100, hasil.persen);
-    const tercapai = hasil.count >= hasil.total;
-    const chips = hasil.setor.map(n =>
-      `<span class="bobot-chip" style="background:white;color:#059669;border:1px solid #05996940;font-weight:700">${escapeHtml(n)}</span>`
-    ).join('');
-    box.innerHTML = `
-      <div class="alert alert-warning" style="background:#fef3c7;color:#854d0e;border-color:#fde68a;display:block">
-        <div class="flex-row" style="margin-bottom:8px">
-          <span class="material-symbols-outlined" style="font-size:17px">${tercapai ? 'verified' : 'calculate'}</span>
-          <div style="flex:1">
-            <div style="font-weight:800;font-size:14px">
-              Auto · ${hasil.count} dari ${hasil.total} surah tersetor
-              ${tercapai
-                ? '<span class="badge" style="margin-left:6px;background:#059669;color:white">✓ Lengkap</span>'
-                : `<span class="badge" style="margin-left:6px;background:#dc2626;color:white">${hasil.persen.toFixed(1)}%</span>`}
-            </div>
-            <div class="text-small">Nilai Kuantitas: <strong>${nilaiKuantitas.toFixed(2)}</strong> · Target: ${hasil.total} surah (Ad-Dhuha s.d. An-Nas)</div>
-          </div>
-        </div>
-        ${hasil.setor.length
-          ? `<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px">${chips}</div>`
-          : `<div class="text-small" style="margin-top:4px;font-style:italic">Belum ada surah Iqra' yang tersetor</div>`}
-      </div>
-    `;
-    updateNilaiAkhir();
-    return;
-  }
-
-  if (kat === 'ALQURAN_PEMULA') {
-    const hasil = hitungKuantitasPemula(baris);
-    FORM_STATE.jumlah_juz = Number(hasil.totalJuz.toFixed(4));
-    const nilaiKuantitas = Math.min(100, hasil.totalJuz * 100);
-    const tercapai = hasil.totalJuz >= 1;
-    box.innerHTML = `
-      <div class="alert alert-warning" style="background:#fef3c7;color:#854d0e;border-color:#fde68a;display:block">
-        <div class="flex-row" style="margin-bottom:8px">
-          <span class="material-symbols-outlined" style="font-size:17px">${tercapai ? 'verified' : 'calculate'}</span>
-          <div style="flex:1">
-            <div style="font-weight:800;font-size:14px">
-              Auto · Juz 30: ${hasil.juz30Persen.toFixed(1)}% (${hasil.totalJuz.toFixed(2)} juz)
-              ${tercapai
-                ? '<span class="badge" style="margin-left:6px;background:#059669;color:white">✓ Target Tercapai</span>'
-                : `<span class="badge" style="margin-left:6px;background:#dc2626;color:white">${(hasil.totalJuz*100).toFixed(1)}% target</span>`}
-            </div>
-            <div class="text-small">Nilai Kuantitas: <strong>${nilaiKuantitas.toFixed(2)}</strong> · Target: 1 juz (Juz 30)</div>
-          </div>
-        </div>
-      </div>
-    `;
-    updateNilaiAkhir();
-    return;
-  }
-
-  // ALQURAN_LANJUT (existing behavior)
-  const hasil = hitungJuzOtomatis(baris, getAmbangSetoran(kat));
-  FORM_STATE.jumlah_juz = Number(hasil.totalJuz.toFixed(4));
-  const target = getTargetJuz(siswa.kelas);
-  const nilaiKuantitas = hitungNilaiKuantitas(hasil.totalJuz, siswa.kelas);
-  const tercapai = hasil.totalJuz >= target;
-  const juzList = Object.keys(hasil.detailPerJuz).map(Number).sort((a,b) => a-b);
-  const juzChips = juzList.map(j => {
-    const p = hasil.detailPerJuz[j];
-    const w = p >= 100 ? '#059669' : p >= 50 ? '#d97706' : '#dc2626';
-    return `<span class="bobot-chip" style="background:white;color:${w};border:1px solid ${w}40;font-weight:700">Juz ${j}: ${p.toFixed(1)}%</span>`;
-  }).join('');
-  box.innerHTML = `
-    <div class="alert alert-warning" style="background:#fef3c7;color:#854d0e;border-color:#fde68a;display:block">
-      <div class="flex-row" style="margin-bottom:8px">
-        <span class="material-symbols-outlined" style="font-size:17px">${tercapai ? 'verified' : 'calculate'}</span>
-        <div style="flex:1">
-          <div style="font-weight:800;font-size:14px">
-            Auto · Total ${hasil.totalJuz.toFixed(2)} juz
-            ${tercapai
-              ? '<span class="badge" style="margin-left:6px;background:#059669;color:white">✓ Target Tercapai</span>'
-              : `<span class="badge" style="margin-left:6px;background:#dc2626;color:white">${(hasil.totalJuz/target*100).toFixed(1)}% target</span>`}
-          </div>
-          <div class="text-small">Nilai Kuantitas: <strong>${nilaiKuantitas.toFixed(2)}</strong> · Target kelas ${escapeHtml(siswa.kelas || '-')}: ${target} juz</div>
-        </div>
-      </div>
-      ${juzList.length
-        ? `<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:4px">${juzChips}</div>`
-        : `<div class="text-small" style="margin-top:4px;font-style:italic">Belum ada surah yang tersetor</div>`}
-    </div>
-  `;
-  updateNilaiAkhir();
+// Surah lengkap terdekat sebelum baris i (untuk tombol "Salin nilai surah sebelumnya")
+function barisSebelumnya(i) {
+  for (let j = i - 1; j >= 0; j--) if (barisLengkap(FORM_STATE.baris[j])) return FORM_STATE.baris[j];
+  return null;
 }
 
-// Render box kuantitas saat admin override manual
-function renderKuantitasBoxManual() {
-  const box = document.getElementById('kuantitasBox');
-  if (!box) return;
-  const val = FORM_STATE.jumlah_juz;
-  const siswa = FORM_STATE.siswa;
-  const kat = getKategori(siswa);
-  if (val === '' || val === null || isNaN(Number(val))) {
-    box.innerHTML = `
-      <div class="alert alert-info" style="background:#fef3c7;color:#854d0e;border-color:#fde68a">
-        <span class="material-symbols-outlined" style="font-size:17px">edit</span>
-        <span>Mode override manual aktif. Isi nilai di atas.</span>
-      </div>
-    `;
-    updateNilaiAkhir();
-    return;
-  }
-  const rawVal = Number(val);
-  const nilai = hitungNilaiKuantitasFromRaw(rawVal, siswa);
-  let labelTarget, labelVal, tercapai;
-  if (kat === 'TAHAP_IQRA') {
-    labelTarget = `${SURAH_TARGET_IQRA.length} surah`;
-    labelVal = `${rawVal} surah`;
-    tercapai = rawVal >= SURAH_TARGET_IQRA.length;
-  } else if (kat === 'ALQURAN_PEMULA') {
-    labelTarget = '1 juz (Juz 30)';
-    labelVal = `${rawVal} juz`;
-    tercapai = rawVal >= 1;
-  } else {
-    const target = getTargetJuz(siswa.kelas);
-    labelTarget = `${target} juz (kelas ${siswa.kelas || '-'})`;
-    labelVal = `${rawVal} juz`;
-    tercapai = rawVal >= target;
-  }
-  box.innerHTML = `
-    <div class="alert alert-warning" style="background:#fef3c7;color:#854d0e;border-color:#fde68a">
-      <span class="material-symbols-outlined" style="font-size:17px">${tercapai ? 'verified' : 'edit'}</span>
-      <div style="flex:1">
-        <div style="font-weight:800;font-size:14px;margin-bottom:4px">
-          Manual · ${labelVal}
-          ${tercapai
-            ? '<span class="badge" style="margin-left:6px;background:#059669;color:white">✓ Target Tercapai</span>'
-            : '<span class="badge" style="margin-left:6px;background:#dc2626;color:white">Belum Tercapai</span>'}
-        </div>
-        <div class="text-small">
-          Nilai Kuantitas: <strong>${nilai.toFixed(2)}</strong> · Target: ${labelTarget}
-        </div>
-      </div>
-    </div>
-  `;
-  updateNilaiAkhir();
+function refreshKartu(i) {
+  const b = FORM_STATE.baris[i];
+  const lengkap = barisLengkap(b);
+  const tot = document.getElementById('tot-' + i);
+  const juz = document.getElementById('juz-' + i);
+  const salin = document.getElementById('salin-' + i);
+  if (!tot) return;
+  tot.textContent = lengkap ? hitungTotal(b).toFixed(2) : '';
+  // Tanda juz hanya untuk surah yang sudah dinilai
+  juz.textContent = lengkap ? labelJuzSurah(b.surah_nama) : '';
+  juz.style.display = lengkap && juz.textContent ? '' : 'none';
+  const prev = barisSebelumnya(i);
+  const bisa = i === FORM_STATE.aktif && barisKosong(b) && !!prev;
+  salin.style.display = bisa ? '' : 'none';
+  if (bisa) salin.textContent = `Salin nilai surah sebelumnya (${ASPEK.map(([f]) => prev[f]).join(' · ')})`;
 }
 
-// Admin: toggle override manual
+function aktifkanSurah(i) {
+  if (FORM_STATE.aktif === i) return;
+  FORM_STATE.aktif = i;
+  document.querySelectorAll('#surahCards .v-card').forEach(el =>
+    el.classList.toggle('aktif', Number(el.dataset.i) === i));
+  FORM_STATE.baris.forEach((_, j) => refreshKartu(j));
+}
+
+function isiNilai(i, field, val) {
+  FORM_STATE.baris[i][field] = val === '' ? '' : Number(val);
+  refreshKartu(i);
+  updateFooter();
+}
+
+function salinSebelumnya(i) {
+  const prev = barisSebelumnya(i);
+  if (!prev) return;
+  ASPEK.forEach(([f]) => { FORM_STATE.baris[i][f] = prev[f]; });
+  renderSurahCards();
+  updateFooter();
+}
+
+function hapusSurah(i) {
+  const b = FORM_STATE.baris[i];
+  const buang = () => {
+    FORM_STATE.baris.splice(i, 1);
+    FORM_STATE.aktif = -1;
+    renderSurahCards();
+    updateFooter();
+  };
+  if (barisKosong(b)) return buang();
+  showConfirm('Hapus surah', `Nilai surah ${b.surah_nama} akan dibuang dari penilaian ini. Lanjutkan?`, buang, '🗑️', 'Hapus', 'btn-danger');
+}
+
+function isiBaca(field, val) {
+  FORM_STATE.baca[field] = val === '' ? '' : Number(val);
+  updateFooter();
+}
+
+function toggleHafalan(aktif) {
+  FORM_STATE.hafalanAktif = aktif;
+  document.getElementById('blokSurah').style.display = aktif ? '' : 'none';
+  updateFooter();
+}
+
 function toggleJuzManual(checked) {
   FORM_STATE.juzManualOverride = checked;
-  const input = document.getElementById('fJuzManualInput');
-  if (input) input.style.display = checked ? '' : 'none';
-
-  if (!checked) {
-    // Kembali ke mode auto
-    updateNilaiKuantitas();
-  } else {
-    // Masuk mode manual, pakai nilai yang sudah ada (atau kosong)
-    renderKuantitasBoxManual();
-  }
+  document.getElementById('fJuz').style.display = checked ? '' : 'none';
+  updateFooter();
 }
 
-// Admin: dipanggil saat admin mengubah nilai juz manual
-function updateNilaiKuantitasManual(val) {
+function isiJuzManual(val) {
   FORM_STATE.jumlah_juz = val === '' ? '' : Number(val);
-  renderKuantitasBoxManual();
+  updateFooter();
 }
 
-function updateNilaiAkhir() {
-  const box = document.getElementById('nilaiAkhirBox');
-  if (!box) return;
+function hasilForm() {
+  const fs = FORM_STATE;
+  return hitungPenilaian({
+    siswa: fs.siswa,
+    baris: fs.baris,
+    baca: fs.baca,
+    hafalanAktif: fs.hafalanAktif,
+    juzManual: fs.juzManualOverride ? fs.jumlah_juz : null
+  });
+}
 
-  const baris = FORM_STATE.baris.filter(b => b.surah_nama && b.kelancaran !== '' && b.tajwid !== '' && b.kekuatan_hafalan !== '' && b.adab_tartil !== '');
-  const juzVal = FORM_STATE.jumlah_juz;
-
-  const adaKualitas = baris.length > 0;
-  const adaKuantitas = juzVal !== '' && juzVal !== null && !isNaN(Number(juzVal));
-
-  if (!adaKualitas && !adaKuantitas) {
-    box.innerHTML = '';
-    return;
-  }
-
-  const kualitas = adaKualitas
-    ? baris.map(b => hitungTotal(b)).reduce((a,b)=>a+b,0) / baris.length
-    : 0;
-  const kuantitas = adaKuantitas
-    ? hitungNilaiKuantitasFromRaw(Number(juzVal), FORM_STATE.siswa)
-    : 0;
-  const akhir = hitungNilaiAkhir(kualitas, kuantitas);
-
-  box.innerHTML = `
-    <div class="card" style="background:linear-gradient(135deg,#dbeafe,#e0f2fe);border:2px solid var(--primary);margin-top:14px">
-      <div class="card-title" style="color:var(--primary-dark);border-bottom-color:var(--primary-light)">
-        <span class="material-symbols-outlined" style="font-size:15px">emoji_events</span>
-        Nilai Akhir Siswa
-      </div>
-      <div class="grid-2" style="gap:10px;margin-bottom:12px">
-        <div style="background:white;padding:10px;border-radius:12px;border:1px solid #bfdbfe;text-align:center">
-          <div style="font-size:10px;color:#1e40af;font-weight:700;letter-spacing:.5px">KUALITAS × 70%</div>
-          <div style="font-size:20px;font-weight:800;color:#1e40af;font-family:'Noto Serif',serif">${kualitas.toFixed(2)}</div>
-          <div style="font-size:10px;color:var(--text-muted)">= ${(kualitas*0.7).toFixed(2)}</div>
-        </div>
-        <div style="background:white;padding:10px;border-radius:12px;border:1px solid #fde68a;text-align:center">
-          <div style="font-size:10px;color:#854d0e;font-weight:700;letter-spacing:.5px">KUANTITAS × 30%</div>
-          <div style="font-size:20px;font-weight:800;color:#854d0e;font-family:'Noto Serif',serif">${kuantitas.toFixed(2)}</div>
-          <div style="font-size:10px;color:var(--text-muted)">= ${(kuantitas*0.3).toFixed(2)}</div>
-        </div>
-      </div>
-      <div style="text-align:center;padding:14px;background:white;border-radius:12px;border:2px solid var(--primary)">
-        <div style="font-size:10px;color:var(--primary-dark);font-weight:700;letter-spacing:.8px;margin-bottom:4px">NILAI AKHIR</div>
-        <div style="font-size:40px;font-weight:800;color:${warnaNilai(akhir)};font-family:'Noto Serif',serif;line-height:1">${akhir.toFixed(2)}</div>
-        <div style="margin-top:6px">
-          <span class="badge" style="background:${warnaNilai(akhir)};color:white;font-size:12px;padding:4px 12px">${predikat(akhir)}</span>
-        </div>
-      </div>
-    </div>
-  `;
+function updateFooter() {
+  const el = document.getElementById('nilaiAkhirTeks');
+  if (!el) return;
+  const fs = FORM_STATE;
+  const iqra = getKategori(fs.siswa) === 'TAHAP_IQRA';
+  const h = hasilForm();
+  const adaData = iqra ? bacaLengkap(fs.baca) : fs.baris.some(barisLengkap);
+  el.textContent = adaData ? h.akhir.toFixed(2) : '—';
+  const totBaca = document.getElementById('totBaca');
+  if (totBaca) totBaca.textContent = bacaLengkap(fs.baca) ? h.membaca.toFixed(2) : '';
 }
 
 async function simpanPenilaian() {
-  // Validasi kualitas (baris surah)
-  const validBaris = FORM_STATE.baris.filter(b => b.surah_nama && b.surah_nama.trim());
-  if (!validBaris.length) {
-    showToast('⚠️ Isi minimal 1 surah dengan nama');
-    return;
+  const fs = FORM_STATE;
+  const siswa = fs.siswa;
+  const iqra = getKategori(siswa) === 'TAHAP_IQRA';
+  const diluar = v => isNaN(Number(v)) || Number(v) < 0 || Number(v) > 100;
+
+  // Nilai membaca (khusus Iqra')
+  if (iqra) {
+    if (!bacaLengkap(fs.baca)) return showToast('⚠️ Isi ketiga nilai membaca');
+    if (ASPEK_BACA.some(([f]) => diluar(fs.baca[f]))) return showToast('⚠️ Nilai membaca harus 0–100');
   }
-  for (const b of validBaris) {
-    for (const f of ['kelancaran','tajwid','kekuatan_hafalan','adab_tartil']) {
-      const v = Number(b[f]);
-      if (isNaN(v) || v < 0 || v > 100 || b[f] === '' || b[f] === null) {
-        showToast(`⚠️ Nilai "${f}" pada surah "${b.surah_nama}" harus 0–100`);
-        return;
+
+  // Nilai per surah. Surah yang dipilih tetapi kosong sama sekali tidak ikut disimpan.
+  let valid = [];
+  if (fs.hafalanAktif) {
+    for (const b of fs.baris) {
+      if (barisKosong(b)) continue;
+      if (!barisLengkap(b)) return showToast(`⚠️ Lengkapi keempat nilai surah ${b.surah_nama}`);
+      if (ASPEK.some(([f]) => diluar(b[f]))) return showToast(`⚠️ Nilai surah ${b.surah_nama} harus 0–100`);
+      valid.push(b);
+    }
+    if (!valid.length) {
+      return showToast(iqra
+        ? '⚠️ Tambahkan minimal 1 surah, atau matikan nilai hafalan'
+        : '⚠️ Nilai minimal 1 surah');
+    }
+    if (fs.juzManualOverride) {
+      const j = fs.jumlah_juz;
+      if (j === '' || isNaN(Number(j)) || Number(j) < 0 || Number(j) > 30) {
+        return showToast('⚠️ Jumlah juz manual harus 0–30, atau matikan pengaturan manual');
       }
-    }
-  }
-
-  // Tentukan jumlah juz/surah dan kuantitas
-  const siswa = FORM_STATE.siswa;
-  const kat = getKategori(siswa);
-  let juz, kuantitas;
-
-  if (FORM_STATE.juzManualOverride) {
-    const juzInput = document.getElementById('fJuz');
-    const juzVal = juzInput ? juzInput.value : '';
-    if (juzVal === '' || isNaN(Number(juzVal))) {
-      showToast('⚠️ Isi nilai manual atau nonaktifkan override');
-      return;
-    }
-    juz = Number(juzVal);
-    const maxVal = kat === 'TAHAP_IQRA' ? SURAH_TARGET_IQRA.length : kat === 'ALQURAN_PEMULA' ? 1 : 30;
-    if (juz < 0 || juz > maxVal) {
-      showToast(`⚠️ Nilai harus 0–${maxVal}`);
-      return;
-    }
-    kuantitas = hitungNilaiKuantitasFromRaw(juz, siswa);
-  } else {
-    if (kat === 'TAHAP_IQRA') {
-      const hasil = hitungKuantitasIqra(validBaris);
-      juz = hasil.count;
-      kuantitas = Math.min(100, hasil.persen);
-    } else if (kat === 'ALQURAN_PEMULA') {
-      const hasil = hitungKuantitasPemula(validBaris);
-      juz = Number(hasil.totalJuz.toFixed(4));
-      kuantitas = Math.min(100, hasil.totalJuz * 100);
-    } else {
-      const hasil = hitungJuzOtomatis(validBaris, getAmbangSetoran(kat));
-      juz = Number(hasil.totalJuz.toFixed(4));
-      kuantitas = hitungNilaiKuantitas(juz, siswa.kelas);
     }
   }
 
   const tanggal = document.getElementById('fTanggal').value;
   const catatan = document.getElementById('fCatatan').value.trim();
-  if (!tanggal) {
-    showToast('⚠️ Tanggal ujian wajib diisi');
-    return;
-  }
+  if (!tanggal) return showToast('⚠️ Tanggal ujian wajib diisi');
 
-  // Hitung nilai
-  const totals = validBaris.map(b => hitungTotal(b));
-  const kualitas = totals.reduce((a,b)=>a+b,0) / totals.length;
-  const akhir = hitungNilaiAkhir(kualitas, kuantitas);
+  const h = hitungPenilaian({
+    siswa, baris: valid, baca: fs.baca, hafalanAktif: fs.hafalanAktif,
+    juzManual: fs.juzManualOverride ? fs.jumlah_juz : null
+  });
 
   showLoading('Menyimpan...');
   try {
-    let penilaianId = FORM_STATE.penilaianId;
-
+    let penilaianId = fs.penilaianId;
     const payload = {
       tanggal_ujian: tanggal,
-      catatan: catatan,
-      nilai_kualitas: kualitas,
-      jumlah_juz: juz,
-      nilai_kuantitas: kuantitas,
-      nilai_akhir: akhir,
+      catatan,
+      nilai_kualitas: h.kualitas,
+      jumlah_juz: h.juz,
+      nilai_kuantitas: h.kuantitas,
+      nilai_akhir: h.akhir,
+      baca_lancar: iqra ? Number(fs.baca.lancar) : null,
+      baca_tajwid: iqra ? Number(fs.baca.tajwid) : null,
+      baca_adab: iqra ? Number(fs.baca.adab) : null,
+      hafalan_aktif: iqra ? !!fs.hafalanAktif : false,
       updated_at: new Date().toISOString()
     };
 
     if (penilaianId) {
-      // Update header
-      const { error: eUpd } = await sb.from('penilaian')
-        .update(payload)
-        .eq('id', penilaianId);
+      const { error: eUpd } = await sb.from('penilaian').update(payload).eq('id', penilaianId);
       if (eUpd) throw eUpd;
-
-      // Hapus baris lama, insert yang baru (cara paling sederhana & reliable)
-      const { error: eDel } = await sb.from('nilai_detail')
-        .delete().eq('penilaian_id', penilaianId);
+      const { error: eDel } = await sb.from('nilai_detail').delete().eq('penilaian_id', penilaianId);
       if (eDel) throw eDel;
     } else {
-      // Insert header baru
       const { data: newP, error: eIns } = await sb.from('penilaian')
-        .insert({
-          siswa_id: FORM_STATE.siswa.id,
-          penguji_id: FORM_STATE.penguji.id,
-          ...payload
-        })
+        .insert({ siswa_id: siswa.id, penguji_id: fs.penguji.id, ...payload })
         .select().single();
       if (eIns) throw eIns;
       penilaianId = newP.id;
       // Catat id-nya sekarang: kalau langkah berikutnya gagal (mis. sinyal putus) lalu
       // penguji menekan Simpan lagi, yang terjadi update — bukan insert kedua (duplicate key).
-      FORM_STATE.penilaianId = penilaianId;
+      fs.penilaianId = penilaianId;
     }
 
-    // Insert detail
-    const detailRows = validBaris.map((b, idx) => ({
-      penilaian_id: penilaianId,
-      surah_nama: b.surah_nama.trim(),
-      kelancaran: Number(b.kelancaran),
-      tajwid: Number(b.tajwid),
-      kekuatan_hafalan: Number(b.kekuatan_hafalan),
-      adab_tartil: Number(b.adab_tartil),
-      urutan: idx
-    }));
-    const { error: eDet } = await sb.from('nilai_detail').insert(detailRows);
-    if (eDet) throw eDet;
+    if (valid.length) {
+      const detailRows = valid.map((b, idx) => ({
+        penilaian_id: penilaianId,
+        surah_nama: b.surah_nama,
+        kelancaran: Number(b.kelancaran),
+        tajwid: Number(b.tajwid),
+        kekuatan_hafalan: Number(b.kekuatan_hafalan),
+        adab_tartil: Number(b.adab_tartil),
+        urutan: idx
+      }));
+      const { error: eDet } = await sb.from('nilai_detail').insert(detailRows);
+      if (eDet) throw eDet;
+    }
 
-    // Update assignment status menjadi 'selesai'
     const { error: eAs } = await sb.from('assignment')
       .update({ status: 'selesai' })
-      .eq('siswa_id', FORM_STATE.siswa.id)
-      .eq('penguji_id', FORM_STATE.penguji.id);
+      .eq('siswa_id', siswa.id).eq('penguji_id', fs.penguji.id);
     if (eAs) throw eAs;
 
     hideLoading();
-    showToast(`✅ Tersimpan · Akhir: ${akhir.toFixed(2)} (K:${kualitas.toFixed(1)} + Q:${kuantitas.toFixed(1)})`);
-    showPage('penilaian');
+    showToast(`✅ Tersimpan · Nilai akhir ${h.akhir.toFixed(2)}`);
+    tutupForm();
   } catch (e) {
     hideLoading();
-    const isNetworkErr = e.message === 'Failed to fetch' || e.message === 'NetworkError when attempting to fetch resource.';
-    showToast('❌ Gagal simpan: ' + (isNetworkErr ? 'Tidak dapat terhubung ke server. Periksa koneksi internet atau coba beberapa saat lagi.' : e.message));
+    showToast('❌ Gagal simpan: ' + pesanError(e), 5000);
   }
 }
 
@@ -3608,7 +3597,7 @@ async function hapusPenilaian() {
 
         hideLoading();
         showToast('🗑️ Penilaian dihapus');
-        showPage('penilaian');
+        tutupForm();
       } catch (e) {
         hideLoading();
         showToast('❌ Gagal hapus: ' + e.message);
@@ -3625,7 +3614,7 @@ async function renderRekap() {
   const c = document.getElementById('main-content');
   c.innerHTML = `
     <div class="page-header">
-      <h2><span class="material-symbols-outlined" style="font-size:24px">analytics</span> Rekap Nilai</h2>
+      <h2>Rekap Nilai</h2>
       <p>Ringkasan hasil penilaian tahfidz</p>
     </div>
     <div id="rekapBody"><div class="card"><div class="text-center" style="padding:30px"><div class="spinner"></div></div></div></div>
@@ -3678,8 +3667,8 @@ async function renderRekap() {
       </div>
       <!-- Filter Kategori -->
       <div class="filter-bar">
-        <button class="filter-chip ${STATE.filter.kategori === 'all' ? 'active' : ''}" onclick="STATE.filter.kategori='all'; renderRekap()">Semua Kategori</button>
-        ${KATEGORI_LIST.map(k => `<button class="filter-chip ${STATE.filter.kategori === k.value ? 'active' : ''}" onclick="STATE.filter.kategori='${k.value}'; renderRekap()">${k.icon} ${k.label}</button>`).join('')}
+        <button class="filter-chip ${STATE.filter.kategori === 'all' ? 'active' : ''}" onclick="STATE.filter.kategori='all'; renderRekap()">Semua Status</button>
+        ${KATEGORI_LIST.map(k => `<button class="filter-chip ${STATE.filter.kategori === k.value ? 'active' : ''}" onclick="STATE.filter.kategori='${k.value}'; renderRekap()">${k.label}</button>`).join('')}
       </div>
       ${pengujiSet.length > 1 ? `
       <div class="filter-bar">
@@ -3720,9 +3709,9 @@ async function renderRekap() {
           const na = Number(p.nilai_akhir) || 0;
           const katInfo = getKategoriInfo(s.kategori);
           const kat = getKategori(s);
-          const kuantLabel = kat === 'TAHAP_IQRA'
-            ? `${Number(p.jumlah_juz||0)} surah`
-            : `${Number(p.jumlah_juz||0).toFixed(2)} juz`;
+          const kuantLabel = (kat === 'TAHAP_IQRA' && !p.hafalan_aktif && p.baca_lancar != null)
+            ? 'membaca saja'
+            : `${Number(p.jumlah_juz||0).toFixed(2).replace('.', ',')} juz`;
           return `
             <div class="list-item" onclick="detailRekap('${p.id}')" style="cursor:pointer">
               <div class="list-avatar" style="background:${warnaNilai(na)};color:white">${Math.round(na)}</div>
@@ -3730,7 +3719,7 @@ async function renderRekap() {
                 <div class="list-name">${escapeHtml(s.nama || '-')}</div>
                 <div class="list-meta">
                   <span class="badge badge-blue">${escapeHtml(s.kelas || '-')}</span>
-                  <span class="${katInfo.badge} badge">${katInfo.icon} ${katInfo.label}</span>
+                  <span class="${katInfo.badge} badge">${katInfo.label}</span>
                   <span class="badge badge-purple">${escapeHtml(pg.nama || '-')}</span>
                   <span>${p.nilai_detail?.length || 0} surah · ${kuantLabel}</span>
                   <span class="badge" style="background:${warnaNilai(na)}20;color:${warnaNilai(na)}">${predikat(na)}</span>
@@ -3754,6 +3743,30 @@ async function renderRekap() {
         <span>Gagal memuat rekap: ${escapeHtml(e.message)}</span>
       </div>`;
   }
+}
+
+// Rincian komponen nilai untuk modal detail rekap
+function rincianNilaiHtml(p, s) {
+  const f = n => Number(n || 0).toFixed(2);
+  const baris = (label, nilai, bobot) => `
+    <div class="flex-row flex-between" style="padding:8px 0;border-bottom:1px solid var(--line);font-size:14px">
+      <span>${label}</span>
+      <span><strong>${f(nilai)}</strong> <span class="text-muted">× ${Math.round(bobot * 100)}% = ${f(nilai * bobot)}</span></span>
+    </div>`;
+  const iqraBaru = getKategori(s) === 'TAHAP_IQRA' && p.baca_lancar != null;
+  let html;
+  if (iqraBaru) {
+    const membaca = (Number(p.baca_lancar) + Number(p.baca_tajwid) + Number(p.baca_adab)) / 3;
+    html = baris(`Membaca (${f(p.baca_lancar)} · ${f(p.baca_tajwid)} · ${f(p.baca_adab)})`, membaca, BOBOT_BACA_IQRA);
+    if (p.hafalan_aktif) {
+      const hafalan = hitungNilaiAkhir(p.nilai_kualitas, p.nilai_kuantitas);
+      html += baris(`Hafalan, sistem Al-Qur'an (${f(p.jumlah_juz)} dari ${getTargetJuz(s.kelas)} juz)`, hafalan, BOBOT_HAFALAN_IQRA);
+    }
+  } else {
+    html = baris('Kualitas (rata-rata surah)', p.nilai_kualitas, BOBOT_KUALITAS)
+         + baris(`Kuantitas (${f(p.jumlah_juz)} dari ${getTargetJuz(s.kelas)} juz)`, p.nilai_kuantitas, BOBOT_KUANTITAS);
+  }
+  return `<div style="margin-top:12px">${html}</div>`;
 }
 
 async function detailRekap(penilaianId) {
@@ -3787,7 +3800,7 @@ async function detailRekap(penilaianId) {
       <div style="margin-bottom:12px">
         <div style="font-weight:700;font-size:16px">${escapeHtml(s.nama)}</div>
         <div class="text-small text-muted">
-          ${escapeHtml(s.kelas || '-')} · ${escapeHtml(s.semester || '')} · NISN ${escapeHtml(s.nisn || '-')}
+          ${escapeHtml(s.kelas || '-')} · ${escapeHtml(ketSantri(s))} · NISN ${escapeHtml(s.nisn || '-')}
         </div>
         <div class="text-small text-muted mt-2">
           Penguji: <strong>${escapeHtml(data.penguji?.nama || '-')}</strong> ·
@@ -3795,43 +3808,20 @@ async function detailRekap(penilaianId) {
         </div>
       </div>
 
+      ${details.length ? `
       <div class="nilai-table-wrap">
         <table class="nilai-table">
           <thead>
             <tr>
               <th style="text-align:left">Surah</th>
-              <th>Klr</th><th>Tjw</th><th>Kkt</th><th>Adb</th><th>Total</th>
+              <th>Lancar</th><th>Tajwid</th><th>Hafalan</th><th>Adab</th><th>Total</th>
             </tr>
           </thead>
           <tbody>${rowsHtml}</tbody>
         </table>
-      </div>
+      </div>` : ''}
 
-      <div class="alert alert-info mt-3" style="margin-top:12px;background:#dbeafe;color:#1e40af;border-color:#93c5fd">
-        <div style="flex:1">
-          <div style="font-weight:800;font-size:14px;margin-bottom:4px">
-            Kualitas (rata-rata surah): ${Number(data.nilai_kualitas || 0).toFixed(2)}
-            <span class="badge" style="background:#1e40af;color:white;margin-left:4px">×70% = ${(Number(data.nilai_kualitas || 0)*0.7).toFixed(2)}</span>
-          </div>
-        </div>
-      </div>
-      <div class="alert alert-warning" style="background:#fef3c7;color:#854d0e;border-color:#fde68a">
-        <div style="flex:1">
-          <div style="font-weight:800;font-size:14px;margin-bottom:4px">
-            Kuantitas: ${Number(data.nilai_kuantitas || 0).toFixed(2)}
-            <span class="badge" style="background:#854d0e;color:white;margin-left:4px">×30% = ${(Number(data.nilai_kuantitas || 0)*0.3).toFixed(2)}</span>
-          </div>
-          <div class="text-small">
-            ${(() => {
-              const kat = getKategori(s);
-              const raw = Number(data.jumlah_juz || 0);
-              if (kat === 'TAHAP_IQRA')     return `${raw} dari ${SURAH_TARGET_IQRA.length} surah target (Ad-Dhuha s.d. An-Nas)`;
-              if (kat === 'ALQURAN_PEMULA') return `${raw.toFixed(2)} dari 1 juz target (Juz 30)`;
-              return `${raw.toFixed(2)} dari ${getTargetJuz(s.kelas)} juz target (kelas ${escapeHtml(s.kelas || '-')})`;
-            })()}
-          </div>
-        </div>
-      </div>
+      ${rincianNilaiHtml(data, s)}
 
       <div style="background:linear-gradient(135deg,#dbeafe,#e0f2fe);padding:16px;border-radius:16px;border:2px solid var(--primary);text-align:center;margin-top:12px">
         <div style="font-size:10px;color:var(--primary-dark);font-weight:700;letter-spacing:.8px">NILAI AKHIR</div>
@@ -3842,7 +3832,7 @@ async function detailRekap(penilaianId) {
 
       <div style="display:flex;gap:8px;margin-top:14px">
         <button class="btn btn-outline" style="flex:1" onclick="closeModal()">Tutup</button>
-        <button class="btn btn-primary" style="flex:1" onclick="closeModal(); openFormPenilaian('${data.siswa_id}', '${data.penguji_id}')">
+        <button class="btn btn-primary" style="flex:1" onclick="closeModal(); bukaSantri('${data.siswa_id}', '${data.penguji_id}', 'rekap')">
           <span class="material-symbols-outlined" style="font-size:15px">edit</span> Edit
         </button>
       </div>
@@ -3860,31 +3850,33 @@ function exportRekapExcel() {
     return;
   }
 
-  // Sheet 1: Rekap (satu baris per siswa)
+  // Sheet 1: Rekap (satu baris per santri)
   const sheet1 = [
-    ['NO','NISN','NAMA SISWA','KELAS','KATEGORI','SEMESTER','PENGUJI','TANGGAL','JUMLAH SURAH','KUANTITAS RAW','TARGET KUANTITAS','NILAI KUALITAS (70%)','NILAI KUANTITAS (30%)','NILAI AKHIR','PREDIKAT','CATATAN']
+    ['NO','NISN','NAMA SANTRI','KELAS','STATUS','JUMLAH HAFALAN (JUZ)','SEMESTER','PENGUJI','TANGGAL','JUMLAH SURAH DINILAI','NILAI MEMBACA','JUZ TERSETOR','TARGET JUZ','NILAI KUALITAS','NILAI KUANTITAS','NILAI AKHIR','PREDIKAT','CATATAN']
   ];
+  const f2 = n => Number(n || 0).toFixed(2);
   data.forEach((p, i) => {
     const s = p.siswa || {};
-    const kat = getKategori(s);
-    const katInfo = getKategoriInfo(s.kategori);
-    const raw = Number(p.jumlah_juz || 0);
-    const targetLabel = getTargetKuantitasLabel(s);
+    const iqra = getKategori(s) === 'TAHAP_IQRA';
+    const membaca = (iqra && p.baca_lancar != null)
+      ? f2((Number(p.baca_lancar) + Number(p.baca_tajwid) + Number(p.baca_adab)) / 3) : '';
     sheet1.push([
       i+1,
       s.nisn || '',
       s.nama || '',
       s.kelas || '',
-      katInfo.label,
+      getKategoriInfo(s.kategori).label,
+      iqra ? '' : (s.jumlah_hafalan ?? ''),
       s.semester || '',
       p.penguji?.nama || '',
       p.tanggal_ujian || '',
       (p.nilai_detail||[]).length,
-      kat === 'TAHAP_IQRA' ? `${raw} surah` : `${raw} juz`,
-      targetLabel,
-      Number(p.nilai_kualitas || 0).toFixed(2),
-      Number(p.nilai_kuantitas || 0).toFixed(2),
-      Number(p.nilai_akhir).toFixed(2),
+      membaca,
+      f2(p.jumlah_juz),
+      getTargetJuz(s.kelas),
+      f2(p.nilai_kualitas),
+      f2(p.nilai_kuantitas),
+      f2(p.nilai_akhir),
       predikat(Number(p.nilai_akhir)),
       p.catatan || ''
     ]);
@@ -3916,7 +3908,7 @@ function exportRekapExcel() {
   const wb = XLSX.utils.book_new();
   const ws1 = XLSX.utils.aoa_to_sheet(sheet1);
   const ws2 = XLSX.utils.aoa_to_sheet(sheet2);
-  ws1['!cols'] = [{wch:4},{wch:14},{wch:24},{wch:10},{wch:10},{wch:18},{wch:12},{wch:8},{wch:8},{wch:8},{wch:14},{wch:14},{wch:12},{wch:14},{wch:28}];
+  ws1['!cols'] = [{wch:4},{wch:14},{wch:26},{wch:8},{wch:11},{wch:10},{wch:10},{wch:20},{wch:12},{wch:10},{wch:10},{wch:10},{wch:8},{wch:10},{wch:10},{wch:10},{wch:14},{wch:28}];
   ws2['!cols'] = [{wch:14},{wch:24},{wch:10},{wch:18},{wch:18},{wch:14},{wch:10},{wch:16},{wch:14},{wch:8}];
   XLSX.utils.book_append_sheet(wb, ws1, 'Rekap Nilai');
   XLSX.utils.book_append_sheet(wb, ws2, 'Detail Surah');
@@ -4076,22 +4068,12 @@ function renderHalamanPenguji() {
     showPage('home');
     return;
   }
+  PENGUJI_TAB = 'assignment';
   const c = document.getElementById('main-content');
   c.innerHTML = `
     <div class="page-header">
-      <h2><span class="material-symbols-outlined" style="font-size:24px">groups</span> Penguji</h2>
-      <p>Kelola akun penguji dan penugasan</p>
+      <h2>Penugasan</h2>
     </div>
-
-    <div class="filter-bar">
-      <button class="filter-chip ${PENGUJI_TAB === 'akun' ? 'active' : ''}" onclick="switchPengujiTab('akun')">
-        👤 Akun Penguji
-      </button>
-      <button class="filter-chip ${PENGUJI_TAB === 'assignment' ? 'active' : ''}" onclick="switchPengujiTab('assignment')">
-        📋 Assignment
-      </button>
-    </div>
-
     <div id="pengujiTabBody"></div>
   `;
   renderPengujiTab();
@@ -4122,8 +4104,7 @@ function renderHalamanSiswa() {
   const c = document.getElementById('main-content');
   c.innerHTML = `
     <div class="page-header">
-      <h2><span class="material-symbols-outlined" style="font-size:24px">school</span> Siswa</h2>
-      <p>Kelola data siswa dan import dari Excel</p>
+      <h2>Santri</h2>
     </div>
     <div id="adminTabBody"></div>
   `;
@@ -4143,29 +4124,14 @@ function renderHalamanPengaturan() {
   const c = document.getElementById('main-content');
   c.innerHTML = `
     <div class="page-header">
-      <h2><span class="material-symbols-outlined" style="font-size:24px">settings</span> Pengaturan</h2>
-      <p>${isAdmin ? 'Kelola profil, lembaga, surah, dan sistem' : 'Kelola akun dan preferensi'}</p>
+      <h2>Pengaturan</h2>
     </div>
 
+    ${isAdmin ? `
     <div class="filter-bar">
-      <button class="filter-chip ${PENGATURAN_TAB === 'profil' ? 'active' : ''}" onclick="switchPengaturanTab('profil')">
-        👤 Profil
-      </button>
-      ${isAdmin ? `
-        <button class="filter-chip ${PENGATURAN_TAB === 'lembaga' ? 'active' : ''}" onclick="switchPengaturanTab('lembaga')">
-          🏫 Lembaga
-        </button>
-        <button class="filter-chip ${PENGATURAN_TAB === 'surah' ? 'active' : ''}" onclick="switchPengaturanTab('surah')">
-          📘 Surah
-        </button>
-        <button class="filter-chip ${PENGATURAN_TAB === 'sistem' ? 'active' : ''}" onclick="switchPengaturanTab('sistem')">
-          🛠️ Sistem
-        </button>
-        <button class="filter-chip ${PENGATURAN_TAB === 'kelas' ? 'active' : ''}" onclick="switchPengaturanTab('kelas')">
-          📁 Kelas
-        </button>
-      ` : ''}
-    </div>
+      ${[['profil','Profil'],['lembaga','Lembaga'],['akun','Akun penguji'],['kelas','Kelas'],['sistem','Sistem']].map(([id, label]) =>
+        `<button class="filter-chip ${PENGATURAN_TAB === id ? 'active' : ''}" onclick="switchPengaturanTab('${id}')">${label}</button>`).join('')}
+    </div>` : ''}
 
     <div id="pengaturanTabBody"></div>
   `;
@@ -4183,7 +4149,7 @@ async function renderPengaturanTab() {
   switch (PENGATURAN_TAB) {
     case 'profil':  return renderTabProfil();
     case 'lembaga': return renderAdminLembagaOnly();   // hanya form lembaga
-    case 'surah':   return renderAdminSurah();
+    case 'akun':    return renderAdminPenguji();        // akun penguji
     case 'sistem':  return renderTabSistem();           // koneksi DB + zona berbahaya + install app
     case 'kelas':   return renderTabKelas();            // manajemen arsip kelas
   }
@@ -4218,17 +4184,6 @@ function renderTabProfil() {
     </div>
 
     <div class="card">
-      <div class="card-title"><span class="material-symbols-outlined" style="font-size:15px">install_mobile</span> Install Aplikasi</div>
-      <p class="text-small text-muted" style="margin-bottom:10px">
-        Install aplikasi ke HP untuk akses lebih cepat (seperti app biasa).
-      </p>
-      <button class="btn btn-primary btn-full" onclick="showInstallInstructions()">
-        <span class="material-symbols-outlined" style="font-size:15px">download</span>
-        Cara Install
-      </button>
-    </div>
-
-    <div class="card">
       <div class="card-title"><span class="material-symbols-outlined" style="font-size:15px">logout</span> Sesi</div>
       <button class="btn btn-danger btn-full" onclick="handleLogout()">
         <span class="material-symbols-outlined" style="font-size:15px">logout</span>
@@ -4259,6 +4214,13 @@ async function renderAdminLembagaOnly() {
         <label>Tahun Ajaran</label>
         <input type="text" id="lbTA" value="${escapeHtml(l.tahun_ajaran || '')}" placeholder="2026/2027">
       </div>
+      <div class="form-group">
+        <label>Semester</label>
+        <select id="lbSmt">
+          <option value="Ganjil" ${l.semester !== 'Genap' ? 'selected' : ''}>Ganjil</option>
+          <option value="Genap" ${l.semester === 'Genap' ? 'selected' : ''}>Genap</option>
+        </select>
+      </div>
       <button class="btn btn-primary btn-full" onclick="saveLembaga()">
         <span class="material-symbols-outlined" style="font-size:15px">save</span> Simpan
       </button>
@@ -4269,47 +4231,6 @@ async function renderAdminLembagaOnly() {
 // Tab Sistem: koneksi database + zona berbahaya
 function renderTabSistem() {
   document.getElementById('pengaturanTabBody').innerHTML = `
-    <div class="card" style="border-color:rgba(37,99,235,0.3)">
-      <div class="card-title">
-        <span class="material-symbols-outlined" style="font-size:15px">build</span>
-        Migrasi Database — Kolom Kategori
-      </div>
-      <p class="text-small text-muted" style="margin-bottom:8px">
-        Jalankan SQL berikut di <strong>Supabase → SQL Editor</strong> agar fitur Kategori Siswa aktif:
-      </p>
-      <pre style="background:#f1f5f9;padding:10px;border-radius:8px;font-size:11px;overflow-x:auto;line-height:1.6;color:#0f172a">ALTER TABLE siswa
-ADD COLUMN IF NOT EXISTS kategori TEXT
-DEFAULT 'ALQURAN_LANJUT'
-CHECK (kategori IN ('ALQURAN_LANJUT','ALQURAN_PEMULA','TAHAP_IQRA'));
-
-UPDATE siswa SET kategori = 'ALQURAN_LANJUT' WHERE kategori IS NULL;</pre>
-      <button class="btn btn-accent btn-sm btn-full" style="margin-top:8px" onclick="navigator.clipboard.writeText(\`ALTER TABLE siswa\nADD COLUMN IF NOT EXISTS kategori TEXT\nDEFAULT 'ALQURAN_LANJUT'\nCHECK (kategori IN ('ALQURAN_LANJUT','ALQURAN_PEMULA','TAHAP_IQRA'));\n\nUPDATE siswa SET kategori = 'ALQURAN_LANJUT' WHERE kategori IS NULL;\`).then(()=>showToast('✅ SQL disalin'))">
-        <span class="material-symbols-outlined" style="font-size:14px">content_copy</span> Salin SQL
-      </button>
-    </div>
-    <div class="card">
-      <div class="card-title">
-        <span class="material-symbols-outlined" style="font-size:15px">database</span>
-        Koneksi Database
-      </div>
-      <p class="text-small text-muted" style="margin-bottom:10px">
-        Kredensial Supabase: <strong>${CREDS?.source === 'hardcoded' ? '🔒 Dari file (semua device)' : '💾 Dari localStorage (per-device)'}</strong>
-      </p>
-      <p class="text-small text-muted" style="margin-bottom:10px;word-break:break-all;background:var(--bg-input);padding:8px;border-radius:8px;font-family:monospace;font-size:11px">
-        ${escapeHtml(SUPABASE_URL)}
-      </p>
-      ${CREDS?.source === 'localStorage' ? `
-        <button class="btn btn-outline btn-full btn-sm" onclick="resetSupabaseConfig()">
-          <span class="material-symbols-outlined" style="font-size:14px">swap_horiz</span>
-          Ganti Kredensial / Reset
-        </button>
-      ` : `
-        <p class="text-small" style="color:var(--text-muted);font-style:italic">
-          Kredensial di-hardcode di file index.html. Untuk mengubah, edit file.
-        </p>
-      `}
-    </div>
-
     <div class="card" style="border-color:rgba(220,38,38,0.2)">
       <div class="card-title" style="color:var(--danger)">
         <span class="material-symbols-outlined" style="font-size:15px;color:inherit">dangerous</span>
@@ -4360,30 +4281,18 @@ async function renderAdminSiswa() {
     const siswa = siswaAll.filter(s => !STATE.kelasArsip.includes(s.kelas));
     getTabBodyEl().innerHTML = `
       <div class="card">
-        <div class="card-title">
-          <span class="material-symbols-outlined" style="font-size:15px">group</span>
-          Data Siswa (${siswa.length})
-        </div>
-        <div class="grid-2" style="gap:8px;margin-bottom:12px">
-          <button class="btn btn-primary btn-sm" onclick="openFormSiswa()">
-            <span class="material-symbols-outlined" style="font-size:14px">add</span> Tambah
-          </button>
-          <button class="btn btn-outline btn-sm" onclick="document.getElementById('importSiswaExcel').click()">
-            <span class="material-symbols-outlined" style="font-size:14px">upload_file</span> Import Excel
-          </button>
-          <button class="btn btn-outline btn-sm" onclick="downloadTemplateSiswa()">
-            <span class="material-symbols-outlined" style="font-size:14px">download</span> Template Excel
-          </button>
-          <button class="btn btn-outline btn-sm" onclick="exportSiswaExcel()">
-            <span class="material-symbols-outlined" style="font-size:14px">table_view</span> Export
+        <div class="card-title">Santri (${siswa.length})</div>
+        <div style="display:flex;gap:8px;margin-bottom:12px">
+          <button class="btn btn-primary" style="flex:1" onclick="openFormSiswa()">Tambah</button>
+          <button class="btn btn-outline" style="flex:1" onclick="document.getElementById('importSiswaExcel').click()">Import Excel</button>
+          <button class="btn btn-outline" aria-label="Pilihan lain" title="Pilihan lain" onclick="openMenuSiswa()">
+            <span class="material-symbols-outlined">more_horiz</span>
           </button>
         </div>
-        <button class="btn btn-accent btn-full btn-sm" onclick="openBulkSetKategori()" style="margin-bottom:10px">
-          <span class="material-symbols-outlined" style="font-size:14px">category</span> Atur Kategori Massal
-        </button>
+        <div id="bulkSlot"></div>
         <input type="file" id="importSiswaExcel" accept=".xlsx,.xls" style="display:none" onchange="handleImportSiswaExcel(event)">
 
-        <input type="text" id="searchSiswa" placeholder="🔍 Cari nama / NISN..." oninput="filterSiswa(this.value)">
+        <input type="text" id="searchSiswa" placeholder="Cari nama / NISN..." oninput="filterSiswa(this.value)">
       </div>
 
       <div id="siswaList">
@@ -4395,6 +4304,24 @@ async function renderAdminSiswa() {
     getTabBodyEl().innerHTML = `
       <div class="alert alert-danger">Gagal memuat data siswa: ${escapeHtml(e.message)}</div>`;
   }
+}
+
+function openMenuSiswa() {
+  const item = (fn, icon, label) => `
+    <button class="btn btn-outline btn-full" style="justify-content:flex-start" onclick="closeModal(); ${fn}">
+      <span class="material-symbols-outlined" style="font-size:18px">${icon}</span> ${label}
+    </button>`;
+  showModal(`
+    <div class="modal-header">
+      <h3>Pilihan lain</h3>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="v-menu">
+      ${item('downloadTemplateSiswa()', 'download', 'Unduh template Excel')}
+      ${item('exportSiswaExcel()', 'table_view', 'Export daftar santri')}
+      ${item('openBulkSetKategori()', 'category', 'Atur status beberapa santri sekaligus')}
+    </div>
+  `);
 }
 
 function renderSiswaListHtml(siswa, bulkMode = false) {
@@ -4410,7 +4337,7 @@ function renderSiswaListHtml(siswa, bulkMode = false) {
         <div class="list-name">${escapeHtml(s.nama)}</div>
         <div class="list-meta">
           <span class="badge badge-blue">${escapeHtml(s.kelas || '-')}</span>
-          <span class="${katInfo.badge} badge">${katInfo.icon} ${katInfo.label}</span>
+          ${s.status_dikunci ? `<span class="${katInfo.badge} badge">${katInfo.label}</span>` : ''}
           <span>NISN ${escapeHtml(s.nisn || '-')}</span>
         </div>
       </div>
@@ -4470,23 +4397,11 @@ function openFormSiswa(existing = null) {
         <input type="text" id="sfKelas" value="${escapeHtml(s.kelas || '')}" placeholder="7A, 8B, 9A">
       </div>
       <div class="form-group">
-        <label>Semester <span class="req">*</span></label>
-        <select id="sfSmt">
-          <option value="">-</option>
-          <option value="Ganjil" ${s.semester === 'Ganjil' ? 'selected' : ''}>Ganjil</option>
-          <option value="Genap" ${s.semester === 'Genap' ? 'selected' : ''}>Genap</option>
+        <label>Status <span class="hint">(dikunci penguji saat ujian)</span></label>
+        <select id="sfKategori">
+          ${KATEGORI_LIST.map(k => `<option value="${k.value}" ${getKategori(s) === k.value ? 'selected' : ''}>${k.label}</option>`).join('')}
         </select>
       </div>
-    </div>
-    <div class="form-group">
-      <label>Kategori <span class="req">*</span></label>
-      <select id="sfKategori">
-        ${KATEGORI_LIST.map(k => `<option value="${k.value}" ${(s.kategori || 'ALQURAN_LANJUT') === k.value ? 'selected' : ''}>${k.icon} ${k.label}</option>`).join('')}
-      </select>
-    </div>
-    <div class="form-group">
-      <label>Tahun Ajaran</label>
-      <input type="text" id="sfTA" value="${escapeHtml(s.tahun_ajaran || '')}" placeholder="2026/2027">
     </div>
     <div style="display:flex;gap:8px">
       <button class="btn btn-outline" style="flex:1" onclick="closeModal()">Batal</button>
@@ -4501,15 +4416,17 @@ async function submitSiswa(id) {
     nama: document.getElementById('sfNama').value.trim(),
     nisn: document.getElementById('sfNisn').value.trim(),
     kelas: document.getElementById('sfKelas').value.trim(),
-    semester: document.getElementById('sfSmt').value,
     jenis_kelamin: document.getElementById('sfJK').value,
-    tahun_ajaran: document.getElementById('sfTA').value.trim(),
     kategori: document.getElementById('sfKategori').value
   };
   if (!payload.nama) return showToast('⚠️ Nama wajib');
   if (!payload.nisn) return showToast('⚠️ NISN wajib');
   if (!payload.kelas) return showToast('⚠️ Kelas wajib');
-  if (!payload.semester) return showToast('⚠️ Semester wajib');
+  // Semester & tahun ajaran mengikuti Pengaturan → Lembaga (hanya diisi untuk santri baru)
+  if (!id) {
+    payload.semester = STATE.lembaga?.semester || 'Ganjil';
+    payload.tahun_ajaran = STATE.lembaga?.tahun_ajaran || '';
+  }
 
   showLoading('Menyimpan...');
   try {
@@ -4529,7 +4446,7 @@ async function submitSiswa(id) {
       const berubah = !lama
         || getKategori(lama) !== payload.kategori
         || (lama.kelas || '') !== payload.kelas;
-      if (berubah) await recalcPenilaianForSiswa(id, payload);
+      if (berubah) await recalcPenilaianForSiswa(id, { ...(lama || {}), ...payload });
     }
     hideLoading();
     closeModal();
@@ -4563,25 +4480,15 @@ function deleteSiswa(id) {
 }
 
 function downloadTemplateSiswa() {
-  const ta = STATE.lembaga?.tahun_ajaran || '2026/2027';
   const data = [
-    ['nama','nisn','kelas','semester','jenis_kelamin','tahun_ajaran','kategori'],
-    ['Ahmad Fulan','1234567890','7A','Ganjil','L',ta,'ALQURAN_LANJUT'],
-    ['Siti Aisyah','0987654321','7B','Ganjil','P',ta,'ALQURAN_PEMULA'],
-    ['Budi Santoso','1122334455','7C','Ganjil','L',ta,'TAHAP_IQRA']
+    ['nama','nisn','kelas','jenis_kelamin'],
+    ['Ahmad Fulan','1234567890','7A','L'],
+    ['Siti Aisyah','0987654321','7B','P']
   ];
   const wb = XLSX.utils.book_new();
   const ws = XLSX.utils.aoa_to_sheet(data);
-  ws['!cols'] = [{wch:22},{wch:14},{wch:10},{wch:10},{wch:12},{wch:12},{wch:16}];
-  // Catatan nilai kategori yang valid
-  const ws2 = XLSX.utils.aoa_to_sheet([
-    ['NILAI KATEGORI YANG VALID'],
-    ['ALQURAN_LANJUT',"Al-Qur'an Lanjut (target juz per kelas: kelas 7=2juz, 8=4juz, 9=6juz)"],
-    ['ALQURAN_PEMULA',"Al-Qur'an Pemula (target 1 juz, yaitu Juz 30)"],
-    ['TAHAP_IQRA',"Tahap Iqra' (target 22 surah: Ad-Dhuha s.d. An-Nas)"]
-  ]);
+  ws['!cols'] = [{wch:26},{wch:14},{wch:10},{wch:14}];
   XLSX.utils.book_append_sheet(wb, ws, 'Siswa');
-  XLSX.utils.book_append_sheet(wb, ws2, 'Panduan Kategori');
   XLSX.writeFile(wb, 'Template_Import_Siswa.xlsx');
   showToast('✅ Template diunduh');
 }
@@ -4589,7 +4496,7 @@ function downloadTemplateSiswa() {
 function exportSiswaExcel() {
   const siswa = window._siswaCache || [];
   const data = [
-    ['NO','NAMA','NISN','KELAS','KATEGORI','SEMESTER','JENIS KELAMIN','TAHUN AJARAN']
+    ['NO','NAMA','NISN','KELAS','STATUS','SEMESTER','JENIS KELAMIN','TAHUN AJARAN']
   ];
   siswa.forEach((s,i) => {
     data.push([i+1, s.nama, s.nisn, s.kelas, getKategoriInfo(s.kategori).label, s.semester, s.jenis_kelamin, s.tahun_ajaran]);
@@ -4623,7 +4530,7 @@ function handleImportSiswaExcel(e) {
       const iSmt = findIdx('semester','smt');
       const iJK = findIdx('jenis_kelamin','jk','kelamin','jenis kelamin');
       const iTA = findIdx('tahun_ajaran','ta','tahun ajaran');
-      const iKat = findIdx('kategori','category','kategory');
+      const iKat = findIdx('kategori','status','category','kategory');
       if (iNama === -1 || iKelas === -1) {
         showToast('❌ Kolom "nama" & "kelas" tidak ditemukan');
         return;
@@ -4646,9 +4553,9 @@ function handleImportSiswaExcel(e) {
           nama: String(row[iNama]).trim(),
           nisn: iNisn >= 0 ? String(row[iNisn]||'').trim() : '',
           kelas: String(row[iKelas]||'').trim(),
-          semester: iSmt >= 0 ? String(row[iSmt]||'').trim() : 'Ganjil',
+          semester: (iSmt >= 0 && String(row[iSmt]||'').trim()) || STATE.lembaga?.semester || 'Ganjil',
           jenis_kelamin: iJK >= 0 ? String(row[iJK]||'').trim().toUpperCase().charAt(0) : '',
-          tahun_ajaran: iTA >= 0 ? String(row[iTA]||'').trim() : STATE.lembaga.tahun_ajaran,
+          tahun_ajaran: (iTA >= 0 && String(row[iTA]||'').trim()) || STATE.lembaga?.tahun_ajaran || '',
           kategori: katRaw
         });
       }
@@ -4852,68 +4759,26 @@ async function renderAdminAssignment() {
     const jmlBelum = siswaBelum.length;
 
     getTabBodyEl().innerHTML = `
-      <div class="card">
-        <div class="card-title">
-          <span class="material-symbols-outlined" style="font-size:15px">assignment</span>
-          Penugasan (${assignments.length})
-        </div>
-        <p class="text-small text-muted" style="margin-bottom:12px">
-          Tentukan siapa penguji untuk setiap siswa. <strong>1 siswa = 1 penguji.</strong>
-        </p>
-        <div class="grid-2" style="gap:8px;margin-bottom:10px">
-          <button class="btn btn-primary btn-sm" onclick="openFormAssignment()">
-            <span class="material-symbols-outlined" style="font-size:14px">add</span> Tambah Satuan
-          </button>
-          <button class="btn btn-outline btn-sm" onclick="openFormAssignmentBulk()">
-            <span class="material-symbols-outlined" style="font-size:14px">playlist_add</span> Tugaskan Massal
-          </button>
-        </div>
-        <div class="grid-2" style="gap:8px;margin-bottom:10px">
-          <button class="btn btn-accent btn-sm" onclick="openFormAssignmentRandom()">
-            <span class="material-symbols-outlined" style="font-size:14px">shuffle</span>
-            🎲 Generate Acak
-          </button>
-          <button class="btn btn-outline btn-sm" onclick="document.getElementById('importAssignmentExcel').click()">
-            <span class="material-symbols-outlined" style="font-size:14px">upload_file</span>
-            Import Excel
-          </button>
-        </div>
-        <input type="file" id="importAssignmentExcel" accept=".xlsx,.xls" style="display:none" onchange="handleImportAssignmentExcel(event)">
-        <div class="grid-2" style="gap:8px;margin-bottom:10px">
-          <button class="btn btn-outline btn-sm" onclick="downloadTemplateAssignment()">
-            <span class="material-symbols-outlined" style="font-size:14px">download</span>
-            Template Excel
-          </button>
-          <button class="btn btn-primary btn-sm" onclick="exportAssignmentPDF()">
-            <span class="material-symbols-outlined" style="font-size:14px">picture_as_pdf</span>
-            Export PDF (A4)
-          </button>
-        </div>
-        <input type="text" id="searchAssignment" placeholder="🔍 Cari siswa / penguji..." oninput="filterAssignment(this.value)">
-      </div>
-
       ${jmlBelum > 0 ? `
-        <div class="alert" style="background:linear-gradient(135deg,#fef3c7,#fde68a);color:#854d0e;border:1px solid #f59e0b;margin-bottom:12px">
-          <span class="material-symbols-outlined" style="font-size:17px">warning</span>
+        <div class="alert alert-warning" style="align-items:center;margin-bottom:12px">
           <div style="flex:1">
-            <div style="font-weight:700">${jmlBelum} siswa belum di-assign</div>
-            <div class="text-small" style="margin-top:2px">
-              Klik untuk lihat daftarnya
-            </div>
+            <div style="font-weight:800">${jmlBelum} santri belum punya penguji</div>
+            <div class="text-small">${siswa.length - jmlBelum} dari ${siswa.length} sudah ditugaskan</div>
           </div>
-          <button class="btn-icon" onclick="showSiswaBelumAssign()" style="background:#fff;border-color:#f59e0b;color:#854d0e">
-            <span class="material-symbols-outlined" style="font-size:15px">visibility</span>
-          </button>
-        </div>
-      ` : `
-        <div class="alert alert-success" style="margin-bottom:12px">
-          <span class="material-symbols-outlined" style="font-size:17px">check_circle</span>
-          <span>Semua ${siswa.length} siswa sudah di-assign 👍</span>
-        </div>
-      `}
+          <button class="v-link" onclick="showSiswaBelumAssign()">Lihat</button>
+        </div>` : ''}
+
+      <div style="display:flex;gap:10px;margin-bottom:12px">
+        <button class="btn btn-primary" style="flex:1" onclick="openFormAssignmentRandom()">Bagi otomatis</button>
+        <button class="btn btn-outline" aria-label="Pilihan lain" title="Pilihan lain" onclick="openMenuPenugasan()">
+          <span class="material-symbols-outlined">more_horiz</span>
+        </button>
+      </div>
+      <input type="file" id="importAssignmentExcel" accept=".xlsx,.xls" style="display:none" onchange="handleImportAssignmentExcel(event)">
+      <input type="text" id="searchAssignment" placeholder="Cari santri atau penguji" oninput="filterAssignment(this.value)" style="margin-bottom:12px">
 
       <div id="assignmentList">
-        ${renderAssignmentListHtml(assignments)}
+        ${renderAssignmentGroupsHtml(assignments, false)}
       </div>
     `;
     window._assignmentCache = assignments;
@@ -4925,6 +4790,55 @@ async function renderAdminAssignment() {
   }
 }
 
+// Penugasan dikelompokkan per penguji; ketuk nama penguji untuk melihat santrinya
+function renderAssignmentGroupsHtml(list, bukaSemua) {
+  if (!list.length) {
+    return '<div class="v-empty">Belum ada penugasan. Tekan "Bagi otomatis" untuk membagi santri ke penguji.</div>';
+  }
+  const grup = {};
+  list.forEach(a => {
+    const k = a.penguji_id;
+    if (!grup[k]) grup[k] = { nama: a.penguji?.nama || '-', rows: [] };
+    grup[k].rows.push(a);
+  });
+  return Object.values(grup)
+    .sort((a, b) => a.nama.localeCompare(b.nama))
+    .map(g => {
+      const selesai = g.rows.filter(a => a.status === 'selesai').length;
+      const persen = Math.round(selesai / g.rows.length * 100);
+      const rows = g.rows.slice().sort((a, b) =>
+        (a.siswa?.kelas || '').localeCompare(b.siswa?.kelas || '') || (a.siswa?.nama || '').localeCompare(b.siswa?.nama || ''));
+      return `
+        <details class="v-group" ${bukaSemua ? 'open' : ''}>
+          <summary>
+            <div class="v-group-row"><b>${escapeHtml(g.nama)}</b><span>${selesai} / ${g.rows.length} selesai</span></div>
+            <div class="progress-bar"><div class="progress-fill" style="width:${persen}%"></div></div>
+          </summary>
+          <div class="v-group-body">${renderAssignmentListHtml(rows)}</div>
+        </details>`;
+    }).join('');
+}
+
+function openMenuPenugasan() {
+  const item = (fn, icon, label) => `
+    <button class="btn btn-outline btn-full" style="justify-content:flex-start" onclick="closeModal(); ${fn}">
+      <span class="material-symbols-outlined" style="font-size:18px">${icon}</span> ${label}
+    </button>`;
+  showModal(`
+    <div class="modal-header">
+      <h3>Pilihan lain</h3>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="v-menu">
+      ${item('openFormAssignment()', 'person_add', 'Tugaskan satu santri')}
+      ${item('openFormAssignmentBulk()', 'playlist_add', 'Tugaskan satu kelas ke satu penguji')}
+      ${item("document.getElementById('importAssignmentExcel').click()", 'upload_file', 'Import dari Excel')}
+      ${item('downloadTemplateAssignment()', 'download', 'Unduh template Excel')}
+      ${item('exportAssignmentPDF()', 'picture_as_pdf', 'Cetak daftar (PDF)')}
+    </div>
+  `);
+}
+
 function renderAssignmentListHtml(list) {
   if (!list.length) {
     return '<div class="empty-state"><div class="empty-icon">📋</div><p>Belum ada penugasan.</p></div>';
@@ -4933,21 +4847,19 @@ function renderAssignmentListHtml(list) {
     const s = a.siswa || {}, p = a.penguji || {};
     return `
       <div class="list-item">
-        <div class="list-avatar" style="background:${a.status === 'selesai' ? '#d1fae5' : '#fef3c7'};color:${a.status === 'selesai' ? '#059669' : '#d97706'}">
-          ${a.status === 'selesai' ? '✓' : '⏳'}
-        </div>
+        <div class="list-avatar">${escapeHtml(s.kelas || '-')}</div>
         <div class="list-info">
           <div class="list-name">${escapeHtml(s.nama || '?')}</div>
           <div class="list-meta">
-            <span class="badge badge-blue">${escapeHtml(s.kelas || '-')}</span>
-            <span>→</span>
-            <span class="badge badge-purple">${escapeHtml(p.nama || '-')}</span>
             ${a.status === 'selesai'
               ? '<span class="badge badge-green">Selesai</span>'
               : '<span class="badge badge-orange">Belum</span>'}
           </div>
         </div>
         <div class="list-actions">
+          <button class="btn-icon" onclick="bukaSantri('${a.siswa_id}', '${a.penguji_id}', 'penguji')" title="${a.status === 'selesai' ? 'Lihat / ubah nilai' : 'Isi nilai'}">
+            <span class="material-symbols-outlined" style="font-size:14px">edit_note</span>
+          </button>
           <button class="btn-icon" onclick="openGantiPenguji('${a.id}')" title="Ganti Penguji">
             <span class="material-symbols-outlined" style="font-size:14px">swap_horiz</span>
           </button>
@@ -4969,7 +4881,7 @@ function filterAssignment(q) {
            (p.nama||'').toLowerCase().includes(needle) ||
            (s.kelas||'').toLowerCase().includes(needle);
   });
-  document.getElementById('assignmentList').innerHTML = renderAssignmentListHtml(filtered);
+  document.getElementById('assignmentList').innerHTML = renderAssignmentGroupsHtml(filtered, !!needle);
 }
 
 // Modal: daftar siswa yang belum di-assign
@@ -5707,7 +5619,7 @@ function openFormAssignmentRandom() {
 
   showModal(`
     <div class="modal-header">
-      <h3>🎲 Generate Acak</h3>
+      <h3>Bagi otomatis</h3>
       <button class="modal-close" onclick="closeModal()">✕</button>
     </div>
     <p class="text-small text-muted" style="margin-bottom:12px">
@@ -5860,7 +5772,7 @@ function renderRandomPreview() {
 
   showModal(`
     <div class="modal-header">
-      <h3>🎲 Preview Assignment Acak</h3>
+      <h3>Pratinjau pembagian</h3>
       <button class="modal-close" onclick="closeModal()">✕</button>
     </div>
 
@@ -6116,7 +6028,7 @@ async function renderAdminSurah() {
           <button class="btn btn-outline btn-sm" onclick="toggleAllSurah(true)">✓ Aktifkan Semua</button>
           <button class="btn btn-outline btn-sm" onclick="toggleAllSurah(false)">✗ Nonaktif Semua</button>
         </div>
-        <input type="text" id="searchSurah" placeholder="🔍 Cari surah..." oninput="filterSurah(this.value)">
+        <input type="text" id="searchSurah" placeholder="Cari surah..." oninput="filterSurah(this.value)">
       </div>
       <div id="surahList">
         ${renderSurahListHtml(data)}
@@ -6192,15 +6104,16 @@ async function saveLembaga() {
   const nama = document.getElementById('lbNama').value.trim();
   const alamat = document.getElementById('lbAlamat').value.trim();
   const ta = document.getElementById('lbTA').value.trim();
+  const semester = document.getElementById('lbSmt').value;
   if (!nama) return showToast('⚠️ Nama lembaga wajib');
 
   showLoading('Menyimpan...');
   try {
     const { error } = await sb.from('pengaturan')
-      .update({ nama_lembaga: nama, alamat, tahun_ajaran: ta })
+      .update({ nama_lembaga: nama, alamat, tahun_ajaran: ta, semester })
       .eq('id', 1);
     if (error) throw error;
-    STATE.lembaga = { ...STATE.lembaga, nama_lembaga: nama, alamat, tahun_ajaran: ta };
+    STATE.lembaga = { ...STATE.lembaga, nama_lembaga: nama, alamat, tahun_ajaran: ta, semester };
     document.getElementById('header-title').textContent = nama;
     document.getElementById('header-sub').textContent = 'Penilaian Tahfidz · ' + alamat;
     hideLoading();
@@ -6553,29 +6466,20 @@ async function recalcPenilaianForSiswa(siswaId, siswa) {
 
   for (const pen of list) {
     const details = (pen.nilai_detail || []).filter(d => d.surah_nama);
-    if (!details.length) continue;
+    const iqra = getKategori(siswa) === 'TAHAP_IQRA';
+    // Data lama tanpa nilai membaca tidak bisa dihitung dengan rumus Iqra' → biarkan apa adanya
+    if (iqra && pen.baca_lancar == null) continue;
+    if (!iqra && !details.length) continue;
 
-    const totals = details.map(b => hitungTotal(b));
-    const kualitas = totals.reduce((a,b) => a+b, 0) / totals.length;
-
-    const kat = getKategori(siswa);
-    let juz, kuantitas;
-    if (kat === 'TAHAP_IQRA') {
-      const hasil = hitungKuantitasIqra(details);
-      juz = hasil.count;
-      kuantitas = Math.min(100, hasil.persen);
-    } else if (kat === 'ALQURAN_PEMULA') {
-      const hasil = hitungKuantitasPemula(details);
-      juz = Number(hasil.totalJuz.toFixed(4));
-      kuantitas = Math.min(100, hasil.totalJuz * 100);
-    } else {
-      const hasil = hitungJuzOtomatis(details, getAmbangSetoran(kat));
-      juz = Number(hasil.totalJuz.toFixed(4));
-      kuantitas = hitungNilaiKuantitas(juz, siswa.kelas);
-    }
-    const akhir = hitungNilaiAkhir(kualitas, kuantitas);
+    const h = hitungPenilaian({
+      siswa, baris: details,
+      baca: { lancar: pen.baca_lancar, tajwid: pen.baca_tajwid, adab: pen.baca_adab },
+      hafalanAktif: iqra ? !!pen.hafalan_aktif : true
+    });
+    const kualitas = h.kualitas, juz = h.juz, kuantitas = h.kuantitas, akhir = h.akhir;
 
     await sb.from('penilaian').update({
+      nilai_kualitas: kualitas,
       jumlah_juz: juz,
       nilai_kuantitas: kuantitas,
       nilai_akhir: akhir,
@@ -6599,17 +6503,17 @@ function openBulkSetKategori() {
   const listEl = body.querySelector('#siswaList');
   if (!listEl) return;
 
-  // Ganti tombol "Atur Kategori Massal" menjadi panel konfirmasi
-  const bulkBtn = body.querySelector('[onclick="openBulkSetKategori()"]');
+  // Ganti tombol "Atur Status Massal" menjadi panel konfirmasi
+  const bulkBtn = document.getElementById('bulkSlot');
   if (bulkBtn) {
     bulkBtn.outerHTML = `
       <div id="bulkKategoriPanel" class="card" style="margin-bottom:10px;border:2px solid var(--primary)">
-        <div class="card-title"><span class="material-symbols-outlined" style="font-size:15px">category</span> Atur Kategori Massal</div>
-        <p class="text-small text-muted" style="margin-bottom:10px">Centang siswa yang ingin diubah kategorinya, lalu pilih kategori dan klik Terapkan.</p>
+        <div class="card-title"><span class="material-symbols-outlined" style="font-size:15px">category</span> Atur Status Massal</div>
+        <p class="text-small text-muted" style="margin-bottom:10px">Centang santri yang ingin diubah statusnya, lalu pilih status dan klik Terapkan.</p>
         <div class="form-group">
-          <label>Pilih Kategori</label>
+          <label>Pilih Status</label>
           <select id="bulkKatSelect">
-            ${KATEGORI_LIST.map(k => `<option value="${k.value}">${k.icon} ${k.label}</option>`).join('')}
+            ${KATEGORI_LIST.map(k => `<option value="${k.value}">${k.label}</option>`).join('')}
           </select>
         </div>
         <div style="display:flex;gap:8px">
@@ -6652,8 +6556,8 @@ async function applyBulkSetKategori() {
 
   const katLabel = getKategoriInfo(kategori).label;
   showConfirm(
-    'Atur Kategori Massal',
-    `Ubah kategori ${checked.length} siswa menjadi "${katLabel}"? Penilaian yang sudah ada akan dihitung ulang.`,
+    'Atur Status Massal',
+    `Ubah status ${checked.length} santri menjadi "${katLabel}"? Penilaian yang sudah ada akan dihitung ulang.`,
     async () => {
       showLoading(`Memproses ${checked.length} siswa...`);
       try {
