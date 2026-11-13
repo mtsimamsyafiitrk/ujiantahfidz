@@ -194,12 +194,8 @@ Nilai lama **tidak dihapus**: disalin ke arsip dan tetap bisa dilihat serta di-e
 
 1. **Cek proyek Supabase** di https://supabase.com/dashboard. Proyek gratis otomatis di-*pause* kalau lama tidak dipakai; klik **Restore** bila statusnya *Paused*.
 2. Bila aplikasi menampilkan **"Database perlu diperbarui"**: login sebagai admin, salin SQL yang ditampilkan, jalankan di Supabase → SQL Editor, lalu tekan *Periksa lagi*.
-3. **Pengaturan → Tahun ajaran → Arsipkan nilai & mulai periode baru**:
-   - beri nama arsip untuk nilai yang sekarang (mis. `2025/2026 Genap`),
-   - isi tahun ajaran dan semester baru,
-   - centang **Naikkan kelas** bila berganti tahun ajaran: kelas 7 → 8, kelas 8 → 9, kelas 9 menjadi *lulus*.
-
-   Semua nilai disalin ke arsip, lalu nilai dan penugasan dikosongkan. Prosesnya satu kesatuan: kalau gagal di tengah, tidak ada yang berubah.
+3. **Pengaturan → Tahun ajaran → Arsipkan nilai & mulai periode baru**: beri nama arsip untuk nilai yang sekarang (mis. `2025/2026 Genap`), lalu isi tahun ajaran dan semester baru. Semua nilai disalin ke arsip, lalu nilai dan penugasan dikosongkan. Prosesnya satu kesatuan: kalau gagal di tengah, tidak ada yang berubah. Kelas santri tidak diubah oleh langkah ini.
+3a. Bila berganti tahun ajaran: **Pengaturan → Tahun ajaran → Atur naik kelas / lulus** (juga ada di menu ⋯ halaman Santri). Semua santri tercentang di awal; hilangkan centang pada santri yang tinggal kelas atau belum lulus. Yang dicentang di kelas 7 dan 8 naik ke kelas tujuan (bisa diubah per rombel), yang dicentang di kelas 9 menjadi *lulus*. Lakukan sekali saja setelah nilai diarsipkan.
 4. **Santri → Import Excel** dengan daftar santri terbaru. Santri yang NISN-nya sudah ada **diperbarui** (nama, kelas) dan tidak digandakan; yang belum ada ditambahkan. Aplikasi menampilkan santri aktif yang tidak ada di file; bila mereka sudah pindah, buka datanya dan centang *Tidak aktif lagi*.
 5. **Pengaturan → Akun penguji**: periksa akun, lalu buat **Penugasan** baru.
 6. Coba login sebagai salah satu penguji dan simpan satu nilai percobaan, kemudian hapus lagi.
