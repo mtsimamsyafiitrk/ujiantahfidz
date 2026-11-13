@@ -1856,10 +1856,13 @@ async function enterApp() {
   showPage('home');
 }
 
-const SQL_MIGRASI = `-- Migrasi November 2026: status santri terkunci, jumlah hafalan, nilai membaca Iqra'
+const SQL_MIGRASI = `-- Migrasi: status santri, nilai membaca Iqra', arsip nilai per periode, naik kelas & lulus
+-- Aman dijalankan berulang kali. Data yang sudah ada tidak berubah.
 ALTER TABLE siswa
   ADD COLUMN IF NOT EXISTS status_dikunci BOOLEAN NOT NULL DEFAULT FALSE,
-  ADD COLUMN IF NOT EXISTS jumlah_hafalan NUMERIC;
+  ADD COLUMN IF NOT EXISTS jumlah_hafalan NUMERIC,
+  ADD COLUMN IF NOT EXISTS lulus BOOLEAN NOT NULL DEFAULT FALSE,
+  ADD COLUMN IF NOT EXISTS tahun_lulus TEXT;
 
 ALTER TABLE penilaian
   ADD COLUMN IF NOT EXISTS baca_lancar NUMERIC,
@@ -1870,16 +1873,109 @@ ALTER TABLE penilaian
 ALTER TABLE pengaturan
   ADD COLUMN IF NOT EXISTS semester TEXT DEFAULT 'Ganjil';
 
+-- Salinan nilai per periode ujian. Tidak terhubung ke tabel siswa/penilaian,
+-- jadi tetap utuh walau santri naik kelas, lulus, atau dihapus.
+CREATE TABLE IF NOT EXISTS arsip_nilai (
+  id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  periode         TEXT NOT NULL,
+  tahun_ajaran    TEXT,
+  semester        TEXT,
+  diarsipkan_pada TIMESTAMPTZ NOT NULL DEFAULT now(),
+  siswa_id        UUID,
+  nisn            TEXT,
+  nama            TEXT,
+  kelas           TEXT,
+  kategori        TEXT,
+  jumlah_hafalan  NUMERIC,
+  penguji_id      UUID,
+  penguji_nama    TEXT,
+  tanggal_ujian   DATE,
+  catatan         TEXT,
+  nilai_kualitas  NUMERIC,
+  jumlah_juz      NUMERIC,
+  nilai_kuantitas NUMERIC,
+  nilai_akhir     NUMERIC,
+  baca_lancar     NUMERIC,
+  baca_tajwid     NUMERIC,
+  baca_adab       NUMERIC,
+  hafalan_aktif   BOOLEAN NOT NULL DEFAULT FALSE,
+  detail          JSONB NOT NULL DEFAULT '[]'
+);
+CREATE INDEX IF NOT EXISTS arsip_nilai_periode_idx ON arsip_nilai (periode);
+ALTER TABLE arsip_nilai DISABLE ROW LEVEL SECURITY;
+GRANT ALL ON arsip_nilai TO anon, authenticated;
+
+-- Tutup periode: arsipkan semua nilai, kosongkan nilai & penugasan,
+-- (opsional) naikkan kelas 7→8, 8→9 dan luluskan kelas 9, lalu set periode baru.
+-- Seluruhnya satu transaksi: kalau satu langkah gagal, tidak ada yang berubah.
+CREATE OR REPLACE FUNCTION tutup_periode(p_nama TEXT, p_naik_kelas BOOLEAN, p_ta_baru TEXT, p_semester_baru TEXT)
+RETURNS JSON LANGUAGE plpgsql AS $fn$
+DECLARE
+  v_ta TEXT; v_smt TEXT;
+  n_arsip INT := 0; n_lulus INT := 0; n_naik INT := 0; n_tmp INT := 0;
+BEGIN
+  IF COALESCE(TRIM(p_nama), '') = '' THEN RAISE EXCEPTION 'Nama periode wajib diisi'; END IF;
+  IF COALESCE(TRIM(p_ta_baru), '') = '' THEN RAISE EXCEPTION 'Tahun ajaran baru wajib diisi'; END IF;
+  IF EXISTS (SELECT 1 FROM arsip_nilai WHERE periode = TRIM(p_nama)) THEN
+    RAISE EXCEPTION 'Periode "%" sudah ada di arsip. Pakai nama lain.', TRIM(p_nama);
+  END IF;
+  SELECT tahun_ajaran, semester INTO v_ta, v_smt FROM pengaturan WHERE id = 1;
+
+  INSERT INTO arsip_nilai (periode, tahun_ajaran, semester, siswa_id, nisn, nama, kelas, kategori, jumlah_hafalan,
+      penguji_id, penguji_nama, tanggal_ujian, catatan, nilai_kualitas, jumlah_juz, nilai_kuantitas, nilai_akhir,
+      baca_lancar, baca_tajwid, baca_adab, hafalan_aktif, detail)
+  SELECT TRIM(p_nama), v_ta, v_smt, s.id, s.nisn, s.nama, s.kelas, s.kategori, s.jumlah_hafalan,
+      g.id, g.nama, p.tanggal_ujian, p.catatan, p.nilai_kualitas, p.jumlah_juz, p.nilai_kuantitas, p.nilai_akhir,
+      p.baca_lancar, p.baca_tajwid, p.baca_adab, p.hafalan_aktif,
+      COALESCE((SELECT jsonb_agg(jsonb_build_object(
+                  'surah_nama', d.surah_nama, 'kelancaran', d.kelancaran, 'tajwid', d.tajwid,
+                  'kekuatan_hafalan', d.kekuatan_hafalan, 'adab_tartil', d.adab_tartil,
+                  'total', d.total, 'urutan', d.urutan) ORDER BY d.urutan)
+                FROM nilai_detail d WHERE d.penilaian_id = p.id), '[]'::jsonb)
+  FROM penilaian p
+  JOIN siswa s ON s.id = p.siswa_id
+  LEFT JOIN penguji g ON g.id = p.penguji_id;
+  GET DIAGNOSTICS n_arsip = ROW_COUNT;
+
+  DELETE FROM nilai_detail WHERE id IS NOT NULL;
+  DELETE FROM penilaian WHERE id IS NOT NULL;
+  DELETE FROM assignment WHERE id IS NOT NULL;
+
+  IF p_naik_kelas THEN
+    -- Urutan penting: luluskan kelas 9 dulu, baru 8→9, lalu 7→8
+    UPDATE siswa SET lulus = TRUE, tahun_lulus = v_ta
+      WHERE NOT lulus AND substring(kelas FROM '[789]') = '9';
+    GET DIAGNOSTICS n_lulus = ROW_COUNT;
+    UPDATE siswa SET kelas = regexp_replace(kelas, '8', '9')
+      WHERE NOT lulus AND substring(kelas FROM '[789]') = '8';
+    GET DIAGNOSTICS n_naik = ROW_COUNT;
+    UPDATE siswa SET kelas = regexp_replace(kelas, '7', '8')
+      WHERE NOT lulus AND substring(kelas FROM '[789]') = '7';
+    GET DIAGNOSTICS n_tmp = ROW_COUNT;
+    n_naik := n_naik + n_tmp;
+  END IF;
+
+  -- Periode baru: penguji menentukan dan mengunci status lagi
+  UPDATE siswa SET status_dikunci = FALSE WHERE status_dikunci;
+  UPDATE siswa SET tahun_ajaran = TRIM(p_ta_baru), semester = p_semester_baru WHERE NOT lulus;
+  UPDATE pengaturan SET tahun_ajaran = TRIM(p_ta_baru), semester = p_semester_baru, kelas_arsip = '[]' WHERE id = 1;
+
+  RETURN json_build_object('diarsipkan', n_arsip, 'lulus', n_lulus, 'naik_kelas', n_naik);
+END $fn$;
+GRANT EXECUTE ON FUNCTION tutup_periode(TEXT, BOOLEAN, TEXT, TEXT) TO anon, authenticated;
+
 NOTIFY pgrst, 'reload schema';`;
 
 async function cekPerluMigrasi() {
-  const [a, b, c] = await Promise.all([
-    sb.from('siswa').select('status_dikunci, jumlah_hafalan').limit(1),
+  const hasil = await Promise.all([
+    sb.from('siswa').select('status_dikunci, jumlah_hafalan, lulus, tahun_lulus').limit(1),
     sb.from('penilaian').select('baca_lancar, baca_tajwid, baca_adab, hafalan_aktif').limit(1),
-    sb.from('pengaturan').select('semester').limit(1)
+    sb.from('pengaturan').select('semester').limit(1),
+    sb.from('arsip_nilai').select('id').limit(1)
   ]);
-  // 42703 = kolom tidak ada (Postgres), PGRST204 = kolom tidak dikenal (PostgREST)
-  return [a, b, c].some(r => r.error && (r.error.code === '42703' || r.error.code === 'PGRST204'));
+  // 42703 = kolom tidak ada, 42P01 = tabel tidak ada (Postgres); PGRST204/PGRST205 = idem dari PostgREST
+  const kode = ['42703', '42P01', 'PGRST204', 'PGRST205'];
+  return hasil.some(r => r.error && kode.includes(r.error.code));
 }
 
 function renderHalamanMigrasi() {
@@ -3623,6 +3719,26 @@ async function hapusPenilaian() {
 // ═════════════════════════════════════════════════════════════════
 // HALAMAN: REKAP
 // ═════════════════════════════════════════════════════════════════
+function pilihRekapPeriode(i) {
+  STATE.rekapPeriode = i < 0 ? null : (window._rekapPeriodeList || [])[i] || null;
+  STATE.filter.kelas = 'all'; STATE.filter.penguji = 'all'; STATE.filter.kategori = 'all';
+  renderRekap();
+}
+
+// Nilai arsip, dibentuk seperti hasil fetchAllPenilaianLengkap supaya tampilan & export yang sama bisa dipakai
+async function fetchArsipPeriode(periode) {
+  const { data, error } = await sb.from('arsip_nilai').select('*').eq('periode', periode).order('nama');
+  if (error) throw error;
+  return (data || []).map(a => ({
+    ...a,
+    _arsip: true,
+    siswa: { id: a.siswa_id, nisn: a.nisn, nama: a.nama, kelas: a.kelas, kategori: a.kategori,
+             jumlah_hafalan: a.jumlah_hafalan, semester: a.semester, status_dikunci: true },
+    penguji: { id: a.penguji_id, nama: a.penguji_nama },
+    nilai_detail: Array.isArray(a.detail) ? a.detail : []
+  }));
+}
+
 async function renderRekap() {
   const c = document.getElementById('main-content');
   c.innerHTML = `
@@ -3630,6 +3746,7 @@ async function renderRekap() {
       <h2>Rekap Nilai</h2>
       <p>Ringkasan hasil penilaian tahfidz</p>
     </div>
+    <div id="rekapPeriode"></div>
     <div id="rekapBody"><div class="card"><div class="text-center" style="padding:30px"><div class="spinner"></div></div></div></div>
   `;
 
@@ -3637,7 +3754,19 @@ async function renderRekap() {
     const isAdmin = STATE.user.role === 'admin';
     const isKetuaTahfidz = STATE.user.role === 'ketua_tahfidz';
     const canSeeAll = isAdmin || isKetuaTahfidz;
-    let allData = await fetchAllPenilaianLengkap();
+
+    // Pilihan periode: berjalan + yang sudah diarsipkan
+    const daftarArsip = await fetchDaftarPeriodeArsip();
+    if (STATE.rekapPeriode && !daftarArsip.some(a => a.periode === STATE.rekapPeriode)) STATE.rekapPeriode = null;
+    const dariArsip = !!STATE.rekapPeriode;
+    window._rekapPeriodeList = daftarArsip.map(a => a.periode);
+    document.getElementById('rekapPeriode').innerHTML = daftarArsip.length ? `
+      <div class="filter-bar">
+        <button class="filter-chip ${!dariArsip ? 'active' : ''}" onclick="pilihRekapPeriode(-1)">Periode ini</button>
+        ${daftarArsip.map((a, i) => `<button class="filter-chip ${STATE.rekapPeriode === a.periode ? 'active' : ''}" onclick="pilihRekapPeriode(${i})">${escapeHtml(a.periode)}</button>`).join('')}
+      </div>` : '';
+
+    let allData = dariArsip ? await fetchArsipPeriode(STATE.rekapPeriode) : await fetchAllPenilaianLengkap();
     // Penguji biasa hanya lihat rekapnya sendiri
     if (!canSeeAll) {
       allData = allData.filter(p => p.penguji?.id === STATE.user.id);
@@ -3647,19 +3776,19 @@ async function renderRekap() {
       document.getElementById('rekapBody').innerHTML = `
         <div class="empty-state">
           <div class="empty-icon">📊</div>
-          <p>Belum ada penilaian yang tersimpan.</p>
+          <p>${dariArsip ? 'Tidak ada nilai di arsip ini.' : 'Belum ada penilaian yang tersimpan pada periode ini.'}</p>
         </div>`;
       return;
     }
 
     // Kelompokkan kelas untuk filter (exclude arsip)
-    const kelasSet = [...new Set(data.map(p => p.siswa?.kelas).filter(k => k && !STATE.kelasArsip.includes(k)))].sort();
+    const kelasSet = [...new Set(data.map(p => p.siswa?.kelas).filter(k => k && (dariArsip || !STATE.kelasArsip.includes(k))))].sort();
     const pengujiSet = canSeeAll ? [...new Set(data.map(p => p.penguji?.nama).filter(Boolean))].sort() : [];
 
     if (!STATE.filter.kategori) STATE.filter.kategori = 'all';
 
     let filtered = data.filter(p => {
-      if (STATE.kelasArsip.includes(p.siswa?.kelas)) return false;
+      if (!dariArsip && STATE.kelasArsip.includes(p.siswa?.kelas)) return false;
       if (STATE.filter.kelas !== 'all' && p.siswa?.kelas !== STATE.filter.kelas) return false;
       if (canSeeAll && STATE.filter.penguji !== 'all' && p.penguji?.nama !== STATE.filter.penguji) return false;
       if (STATE.filter.kategori !== 'all' && getKategori(p.siswa) !== STATE.filter.kategori) return false;
@@ -3785,10 +3914,14 @@ function rincianNilaiHtml(p, s) {
 async function detailRekap(penilaianId) {
   showLoading('Memuat detail...');
   try {
-    const { data, error } = await sb.from('penilaian')
-      .select(`*, siswa:siswa_id (*), penguji:penguji_id (nama, username), nilai_detail(*)`)
-      .eq('id', penilaianId).single();
-    if (error) throw error;
+    let data = (window._rekapFiltered || []).find(x => x.id === penilaianId && x._arsip);
+    if (!data) {
+      const res = await sb.from('penilaian')
+        .select(`*, siswa:siswa_id (*), penguji:penguji_id (nama, username), nilai_detail(*)`)
+        .eq('id', penilaianId).single();
+      if (res.error) throw res.error;
+      data = res.data;
+    }
     hideLoading();
 
     const details = (data.nilai_detail || []).sort((a,b) => (a.urutan||0) - (b.urutan||0));
@@ -3845,7 +3978,7 @@ async function detailRekap(penilaianId) {
 
       <div style="display:flex;gap:8px;margin-top:14px">
         <button class="btn btn-outline" style="flex:1" onclick="closeModal()">Tutup</button>
-        <button class="btn btn-primary" style="flex:1" onclick="closeModal(); bukaSantri('${data.siswa_id}', '${data.penguji_id}', 'rekap')">
+        <button class="btn btn-primary" style="flex:1;${data._arsip ? 'display:none' : ''}" onclick="closeModal(); bukaSantri('${data.siswa_id}', '${data.penguji_id}', 'rekap')">
           <span class="material-symbols-outlined" style="font-size:15px">edit</span> Edit
         </button>
       </div>
@@ -3926,7 +4059,8 @@ function exportRekapExcel() {
   XLSX.utils.book_append_sheet(wb, ws1, 'Rekap Nilai');
   XLSX.utils.book_append_sheet(wb, ws2, 'Detail Surah');
 
-  const fname = `Rekap_Tahfidz_${todayLocal()}.xlsx`;
+  const label = STATE.rekapPeriode ? STATE.rekapPeriode.replace(/[^0-9A-Za-z]+/g, '-') + '_' : '';
+  const fname = `Rekap_Tahfidz_${label}${todayLocal()}.xlsx`;
   XLSX.writeFile(wb, fname);
   showToast('✅ Excel tersimpan: ' + fname);
 }
@@ -4142,7 +4276,7 @@ function renderHalamanPengaturan() {
 
     ${isAdmin ? `
     <div class="filter-bar">
-      ${[['profil','Profil'],['lembaga','Lembaga'],['akun','Akun penguji'],['kelas','Kelas'],['sistem','Sistem']].map(([id, label]) =>
+      ${[['profil','Profil'],['lembaga','Lembaga'],['akun','Akun penguji'],['periode','Tahun ajaran'],['kelas','Kelas'],['sistem','Sistem']].map(([id, label]) =>
         `<button class="filter-chip ${PENGATURAN_TAB === id ? 'active' : ''}" onclick="switchPengaturanTab('${id}')">${label}</button>`).join('')}
     </div>` : ''}
 
@@ -4163,6 +4297,7 @@ async function renderPengaturanTab() {
     case 'profil':  return renderTabProfil();
     case 'lembaga': return renderAdminLembagaOnly();   // hanya form lembaga
     case 'akun':    return renderAdminPenguji();        // akun penguji
+    case 'periode': return renderTabPeriode();
     case 'sistem':  return renderTabSistem();           // koneksi DB + zona berbahaya + install app
     case 'kelas':   return renderTabKelas();            // manajemen arsip kelas
   }
@@ -4257,7 +4392,7 @@ function renderTabSistem() {
         Hapus Semua Penilaian
       </button>
       <p class="text-small text-muted" style="margin:14px 0 8px">
-        <strong>Tahun ajaran baru:</strong> Export data siswa &amp; rekap nilai dulu sebagai arsip, lalu kosongkan data siswa lama dan import daftar siswa yang baru.
+Untuk pergantian tahun ajaran, pakai tab <strong>Tahun ajaran</strong> (nilai diarsipkan, santri naik kelas). Tombol di bawah ini menghapus semua santri; nilai yang sudah diarsipkan tetap ada.
       </p>
       <button class="btn btn-outline btn-full btn-sm" style="color:var(--danger);border-color:var(--danger)" onclick="resetAllSiswa()">
         <span class="material-symbols-outlined" style="font-size:14px">group_remove</span>
@@ -4288,13 +4423,23 @@ async function renderAdminTab() {
 }
 
 // ── ADMIN: SISWA ─────────────────────────────────────
+let SISWA_TAB = 'aktif'; // 'aktif' | 'nonaktif'
+
 async function renderAdminSiswa() {
   try {
     const siswaAll = await fetchAllSiswa();
-    const siswa = siswaAll.filter(s => !STATE.kelasArsip.includes(s.kelas));
+    const aktif = siswaAll.filter(s => !s.lulus && !STATE.kelasArsip.includes(s.kelas));
+    const nonaktif = siswaAll.filter(s => s.lulus);
+    if (!nonaktif.length) SISWA_TAB = 'aktif';
+    const siswa = SISWA_TAB === 'nonaktif' ? nonaktif : aktif;
     getTabBodyEl().innerHTML = `
+      ${nonaktif.length ? `
+      <div class="v-seg">
+        <button class="${SISWA_TAB === 'aktif' ? 'on' : ''}" onclick="SISWA_TAB='aktif'; renderAdminSiswa()">Aktif · ${aktif.length}</button>
+        <button class="${SISWA_TAB === 'nonaktif' ? 'on' : ''}" onclick="SISWA_TAB='nonaktif'; renderAdminSiswa()">Lulus / tidak aktif · ${nonaktif.length}</button>
+      </div>` : ''}
       <div class="card">
-        <div class="card-title">Santri (${siswa.length})</div>
+        <div class="card-title">${SISWA_TAB === 'nonaktif' ? 'Lulus / tidak aktif' : 'Santri'} (${siswa.length})</div>
         <div style="display:flex;gap:8px;margin-bottom:12px">
           <button class="btn btn-primary" style="flex:1" onclick="openFormSiswa()">Tambah</button>
           <button class="btn btn-outline" style="flex:1" onclick="document.getElementById('importSiswaExcel').click()">Import Excel</button>
@@ -4313,6 +4458,7 @@ async function renderAdminSiswa() {
       </div>
     `;
     window._siswaCache = siswa;
+    window._siswaSemua = siswaAll;
   } catch (e) {
     getTabBodyEl().innerHTML = `
       <div class="alert alert-danger">Gagal memuat data siswa: ${escapeHtml(e.message)}</div>`;
@@ -4351,6 +4497,7 @@ function renderSiswaListHtml(siswa, bulkMode = false) {
         <div class="list-meta">
           <span class="badge badge-blue">${escapeHtml(s.kelas || '-')}</span>
           ${s.status_dikunci ? `<span class="${katInfo.badge} badge">${katInfo.label}</span>` : ''}
+          ${s.lulus ? `<span class="badge badge-orange">${s.tahun_lulus ? 'Lulus ' + escapeHtml(s.tahun_lulus) : 'Tidak aktif'}</span>` : ''}
           <span>NISN ${escapeHtml(s.nisn || '-')}</span>
         </div>
       </div>
@@ -4416,6 +4563,13 @@ function openFormSiswa(existing = null) {
         </select>
       </div>
     </div>
+    ${existing ? `
+    <div class="form-group">
+      <label style="display:flex;align-items:center;gap:8px;margin:0;font-size:14px;color:var(--text)">
+        <input type="checkbox" id="sfLulus" ${s.lulus ? 'checked' : ''} style="width:18px;height:18px">
+        <span>Tidak aktif lagi (lulus / pindah)</span>
+      </label>
+    </div>` : ''}
     <div style="display:flex;gap:8px">
       <button class="btn btn-outline" style="flex:1" onclick="closeModal()">Batal</button>
       <button class="btn btn-primary" style="flex:1" onclick="submitSiswa('${existing?.id || ''}')">Simpan</button>
@@ -4432,6 +4586,8 @@ async function submitSiswa(id) {
     jenis_kelamin: document.getElementById('sfJK').value,
     kategori: document.getElementById('sfKategori').value
   };
+  const cbLulus = document.getElementById('sfLulus');
+  if (cbLulus) payload.lulus = cbLulus.checked;
   if (!payload.nama) return showToast('⚠️ Nama wajib');
   if (!payload.nisn) return showToast('⚠️ NISN wajib');
   if (!payload.kelas) return showToast('⚠️ Kelas wajib');
@@ -4460,6 +4616,11 @@ async function submitSiswa(id) {
         || getKategori(lama) !== payload.kategori
         || (lama.kelas || '') !== payload.kelas;
       if (berubah) await recalcPenilaianForSiswa(id, { ...(lama || {}), ...payload });
+      // Santri dinonaktifkan → lepaskan penugasan yang belum dinilai supaya tidak muncul di daftar penguji
+      if (payload.lulus && !(lama && lama.lulus)) {
+        const { error: eAs } = await sb.from('assignment').delete().eq('siswa_id', id).eq('status', 'belum');
+        if (eAs) throw eAs;
+      }
     }
     hideLoading();
     closeModal();
@@ -4578,24 +4739,59 @@ function handleImportSiswaExcel(e) {
         return;
       }
 
+      // NISN yang sudah ada di database → perbarui nama/kelas (dan aktifkan lagi); sisanya ditambahkan
+      const semua = await fetchAllSiswa();
+      const perNisn = {};
+      semua.forEach(x => { if (x.nisn) perNisn[String(x.nisn).trim()] = x; });
+      const baru = [], ubah = [], nisnFile = new Set();
+      toInsert.forEach(r => {
+        if (r.nisn) nisnFile.add(r.nisn);
+        const ada = r.nisn ? perNisn[r.nisn] : null;
+        if (!ada) return baru.push(r);
+        const upd = { nama: r.nama, kelas: r.kelas, lulus: false, tahun_lulus: null };
+        if (r.jenis_kelamin) upd.jenis_kelamin = r.jenis_kelamin;
+        if (ada.nama !== upd.nama || ada.kelas !== upd.kelas || ada.lulus || (upd.jenis_kelamin && ada.jenis_kelamin !== upd.jenis_kelamin)) {
+          ubah.push({ id: ada.id, upd });
+        }
+      });
+      const sama = toInsert.length - baru.length - ubah.length;
+      const tidakDiFile = semua.filter(x => !x.lulus && !(x.nisn && nisnFile.has(String(x.nisn).trim())));
+
       showConfirm(
-        'Import ' + toInsert.length + ' Siswa',
-        'Data siswa akan ditambahkan ke database. Lanjutkan?',
+        'Import ' + toInsert.length + ' santri',
+        `${baru.length} santri baru ditambahkan. ${ubah.length} santri yang sudah ada diperbarui (nama/kelas). ${sama} tidak berubah.`
+          + (tidakDiFile.length ? ` ${tidakDiFile.length} santri aktif tidak ada di file ini dan tidak diubah.` : ''),
         async () => {
           showLoading('Mengimpor...');
           try {
-            // Insert bertahap (batch 100)
-            for (let i = 0; i < toInsert.length; i += 100) {
-              const batch = toInsert.slice(i, i + 100);
-              const { error } = await sb.from('siswa').insert(batch);
+            for (let i = 0; i < baru.length; i += 100) {
+              const { error } = await sb.from('siswa').insert(baru.slice(i, i + 100));
+              if (error) throw error;
+            }
+            for (const u of ubah) {
+              const { error } = await sb.from('siswa').update(u.upd).eq('id', u.id);
               if (error) throw error;
             }
             hideLoading();
-            showToast(`✅ Berhasil import ${toInsert.length} siswa`);
-            renderAdminSiswa();
+            SISWA_TAB = 'aktif';
+            await renderAdminSiswa();
+            if (tidakDiFile.length) {
+              showModal(`
+                <div class="modal-header">
+                  <h3>${tidakDiFile.length} santri aktif tidak ada di file</h3>
+                  <button class="modal-close" onclick="closeModal()">✕</button>
+                </div>
+                <p class="text-small text-muted" style="margin-bottom:10px">Mereka tidak diubah. Bila sudah pindah atau lulus, buka datanya lalu centang "Tidak aktif lagi".</p>
+                <div style="max-height:320px;overflow-y:auto">
+                  ${tidakDiFile.map(x => `<div style="padding:8px 0;border-bottom:1px solid var(--line);font-size:14px"><strong>${escapeHtml(x.nama)}</strong> <span class="text-muted">· ${escapeHtml(x.kelas || '-')}</span></div>`).join('')}
+                </div>
+                <button class="btn btn-outline btn-full" style="margin-top:12px" onclick="closeModal()">Tutup</button>`);
+            } else {
+              showToast(`✅ ${baru.length} ditambahkan, ${ubah.length} diperbarui`, 4000);
+            }
           } catch (err) {
             hideLoading();
-            showToast('❌ Gagal: ' + err.message);
+            showToast('❌ Gagal: ' + pesanError(err));
           }
         },
         '📊', 'Import', 'btn-primary'
@@ -4760,8 +4956,8 @@ async function renderAdminAssignment() {
     ]);
 
     // Exclude archived classes
-    const siswa = siswaAll.filter(s => !STATE.kelasArsip.includes(s.kelas));
-    const arsipIds = new Set(siswaAll.filter(s => STATE.kelasArsip.includes(s.kelas)).map(s => s.id));
+    const siswa = siswaAll.filter(s => !s.lulus && !STATE.kelasArsip.includes(s.kelas));
+    const arsipIds = new Set(siswaAll.filter(s => s.lulus || STATE.kelasArsip.includes(s.kelas)).map(s => s.id));
     const assignments = assignmentsAll.filter(a => !arsipIds.has(a.siswa_id));
 
     const pengujiNonAdmin = penguji; // admin juga bisa ditugaskan
@@ -6142,7 +6338,7 @@ async function renderTabKelas() {
   body.innerHTML = `<div class="card"><div class="text-center" style="padding:20px"><div class="spinner"></div></div></div>`;
 
   const [siswaRes, pengaturanRes] = await Promise.all([
-    sb.from('siswa').select('kelas'),
+    sb.from('siswa').select('kelas').eq('lulus', false),
     sb.from('pengaturan').select('kelas_arsip').eq('id', 1).single()
   ]);
 
@@ -6302,6 +6498,146 @@ function resetAllSiswa() {
       })();
     },
     '🗑️', 'Hapus Semua', 'btn-danger'
+  );
+}
+
+// ═════════════════════════════════════════════════════════════════
+// TAHUN AJARAN / PERIODE: arsipkan nilai, naik kelas & lulus
+// Nilai periode lama disalin ke tabel arsip_nilai (lihat fungsi SQL tutup_periode),
+// jadi tetap tersimpan walau santri naik kelas, lulus, atau dihapus.
+// ═════════════════════════════════════════════════════════════════
+async function fetchDaftarPeriodeArsip() {
+  const { data, error } = await sb.from('arsip_nilai').select('periode, diarsipkan_pada').limit(20000);
+  if (error) throw error;
+  const peta = {};
+  (data || []).forEach(r => {
+    if (!peta[r.periode]) peta[r.periode] = { periode: r.periode, jumlah: 0, pada: r.diarsipkan_pada };
+    peta[r.periode].jumlah++;
+  });
+  return Object.values(peta).sort((a, b) => String(b.pada).localeCompare(String(a.pada)));
+}
+
+async function renderTabPeriode() {
+  const body = document.getElementById('pengaturanTabBody');
+  try {
+    const [arsip, penRes, siswaRes] = await Promise.all([
+      fetchDaftarPeriodeArsip(),
+      sb.from('penilaian').select('id'),
+      sb.from('siswa').select('kelas').eq('lulus', false)
+    ]);
+    if (penRes.error) throw penRes.error;
+    if (siswaRes.error) throw siswaRes.error;
+    const l = STATE.lembaga || {};
+    const tingkat = { 7: 0, 8: 0, 9: 0 };
+    siswaRes.data.forEach(x => { const m = String(x.kelas || '').match(/[789]/); if (m) tingkat[m[0]]++; });
+    window._periodeInfo = { jumlahNilai: penRes.data.length, tingkat, arsip };
+
+    body.innerHTML = `
+      <div class="card">
+        <div class="card-title">Periode berjalan</div>
+        <div style="font-size:20px;font-weight:800">${escapeHtml(l.tahun_ajaran || '-')} · ${escapeHtml(l.semester || '-')}</div>
+        <p class="text-small text-muted" style="margin:4px 0 14px">
+          ${penRes.data.length} nilai tersimpan · ${siswaRes.data.length} santri aktif (kelas 7: ${tingkat[7]}, kelas 8: ${tingkat[8]}, kelas 9: ${tingkat[9]})
+        </p>
+        <button class="btn btn-primary btn-full" onclick="openFormTutupPeriode()">Arsipkan nilai &amp; mulai periode baru</button>
+        <p class="text-small text-muted" style="margin-top:10px;line-height:1.5">
+          Semua nilai periode ini disalin ke arsip, lalu nilai dan penugasan dikosongkan untuk ujian berikutnya.
+          Bisa sekaligus menaikkan kelas dan meluluskan kelas 9.
+        </p>
+      </div>
+      <div class="card">
+        <div class="card-title">Arsip nilai</div>
+        ${arsip.length ? arsip.map((a, i) => `
+          <button class="v-row" onclick="STATE.rekapPeriode = window._periodeInfo.arsip[${i}].periode; showPage('rekap')">
+            <span class="v-row-info">
+              <span class="v-row-nama">${escapeHtml(a.periode)}</span>
+              <span class="v-row-ket">${a.jumlah} nilai · diarsipkan ${fmtDate(a.pada)}</span>
+            </span>
+            <span class="material-symbols-outlined" aria-hidden="true">chevron_right</span>
+          </button>`).join('') : '<div class="v-empty">Belum ada periode yang diarsipkan.</div>'}
+      </div>
+    `;
+  } catch (e) {
+    body.innerHTML = `<div class="alert alert-danger"><span>Gagal memuat: ${escapeHtml(pesanError(e))}</span></div>`;
+  }
+}
+
+function openFormTutupPeriode() {
+  const l = STATE.lembaga || {};
+  const info = window._periodeInfo || { jumlahNilai: 0, tingkat: { 7: 0, 8: 0, 9: 0 } };
+  // Usulan periode berikutnya: Ganjil → Genap (tahun sama), Genap → Ganjil (tahun berikutnya, naik kelas)
+  const genap = l.semester === 'Genap';
+  let taBaru = l.tahun_ajaran || '';
+  const m = String(taBaru).match(/^(\d{4})\/(\d{4})$/);
+  if (genap && m) taBaru = `${Number(m[1]) + 1}/${Number(m[2]) + 1}`;
+  showModal(`
+    <div class="modal-header">
+      <h3>Mulai periode baru</h3>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="form-group">
+      <label>Nama arsip untuk nilai yang sekarang (${info.jumlahNilai} nilai)</label>
+      <input type="text" id="tpNama" value="${escapeHtml(((l.tahun_ajaran || '') + ' ' + (l.semester || '')).trim())}" placeholder="2025/2026 Genap">
+    </div>
+    <div class="grid-2">
+      <div class="form-group">
+        <label>Tahun ajaran baru</label>
+        <input type="text" id="tpTA" value="${escapeHtml(taBaru)}" placeholder="2026/2027">
+      </div>
+      <div class="form-group">
+        <label>Semester baru</label>
+        <select id="tpSmt">
+          <option value="Ganjil" ${genap ? 'selected' : ''}>Ganjil</option>
+          <option value="Genap" ${genap ? '' : 'selected'}>Genap</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group">
+      <label style="display:flex;align-items:flex-start;gap:8px;margin:0;font-size:14px;color:var(--text)">
+        <input type="checkbox" id="tpNaik" ${genap ? 'checked' : ''} style="width:18px;height:18px;margin-top:2px;flex-shrink:0">
+        <span>Naikkan kelas: kelas 7 → 8 (${info.tingkat[7]} santri), kelas 8 → 9 (${info.tingkat[8]}), kelas 9 lulus (${info.tingkat[9]})</span>
+      </label>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-outline" style="flex:1" onclick="closeModal()">Batal</button>
+      <button class="btn btn-primary" style="flex:1" onclick="submitTutupPeriode()">Lanjut</button>
+    </div>
+  `);
+}
+
+function submitTutupPeriode() {
+  const nama = document.getElementById('tpNama').value.trim();
+  const ta = document.getElementById('tpTA').value.trim();
+  const smt = document.getElementById('tpSmt').value;
+  const naik = document.getElementById('tpNaik').checked;
+  if (!nama) return showToast('⚠️ Nama arsip wajib diisi');
+  if (!ta) return showToast('⚠️ Tahun ajaran baru wajib diisi');
+  const info = window._periodeInfo || { jumlahNilai: 0 };
+  closeModal();
+  showConfirm(
+    'Mulai periode baru?',
+    `${info.jumlahNilai} nilai diarsipkan sebagai "${nama}". Nilai dan penugasan dikosongkan. `
+      + (naik ? 'Santri naik kelas dan kelas 9 diluluskan. ' : 'Kelas santri tidak diubah. ')
+      + `Periode baru: ${ta} ${smt}. Tindakan ini tidak bisa dibatalkan dari aplikasi.`,
+    async () => {
+      showLoading('Mengarsipkan...');
+      try {
+        const { data, error } = await sb.rpc('tutup_periode', {
+          p_nama: nama, p_naik_kelas: naik, p_ta_baru: ta, p_semester_baru: smt
+        });
+        if (error) throw error;
+        STATE.lembaga = { ...STATE.lembaga, tahun_ajaran: ta, semester: smt, kelas_arsip: '[]' };
+        STATE.kelasArsip = [];
+        hideLoading();
+        const h = data || {};
+        showToast(`✅ ${h.diarsipkan ?? 0} nilai diarsipkan` + (naik ? ` · ${h.naik_kelas ?? 0} naik kelas · ${h.lulus ?? 0} lulus` : ''), 6000);
+        renderTabPeriode();
+      } catch (e) {
+        hideLoading();
+        showToast('❌ ' + pesanError(e), 6000);
+      }
+    },
+    '📦', 'Ya, arsipkan', 'btn-primary'
   );
 }
 
