@@ -348,4 +348,55 @@ GRANT EXECUTE ON FUNCTION tutup_periode(TEXT, BOOLEAN, TEXT, TEXT) TO anon, auth
 
 NOTIFY pgrst, 'reload schema';
 
+-- ───────────────────────────────────────────────────────────────────
+-- Transfer santri antar penguji (permintaan → persetujuan penguji tujuan)
+-- Aman dijalankan berulang kali.
+CREATE TABLE IF NOT EXISTS transfer_santri (
+  id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  dari_penguji_id UUID NOT NULL REFERENCES penguji(id) ON DELETE CASCADE,
+  ke_penguji_id   UUID NOT NULL REFERENCES penguji(id) ON DELETE CASCADE,
+  siswa           JSONB NOT NULL DEFAULT '[]',
+  catatan         TEXT,
+  status          TEXT NOT NULL DEFAULT 'menunggu'
+                  CHECK (status IN ('menunggu','disetujui','ditolak','dibatalkan')),
+  jumlah_pindah   INT,
+  dibuat_pada     TIMESTAMPTZ NOT NULL DEFAULT now(),
+  dijawab_pada    TIMESTAMPTZ
+);
+CREATE INDEX IF NOT EXISTS transfer_santri_status_idx ON transfer_santri (status);
+ALTER TABLE transfer_santri DISABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS transfer_santri_semua ON transfer_santri;
+CREATE POLICY transfer_santri_semua ON transfer_santri FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
+GRANT ALL ON transfer_santri TO anon, authenticated;
+
+-- Setujui transfer: pindahkan penugasan DAN nilai yang sudah masuk ke penguji tujuan.
+-- Satu transaksi; santri yang penugasannya sudah bukan milik pengirim dilewati.
+CREATE OR REPLACE FUNCTION terima_transfer(p_id UUID)
+RETURNS JSON LANGUAGE plpgsql AS $fn$
+DECLARE
+  t transfer_santri%ROWTYPE;
+  v_sid UUID; n_pindah INT := 0; n_baris INT := 0;
+BEGIN
+  SELECT * INTO t FROM transfer_santri WHERE id = p_id FOR UPDATE;
+  IF NOT FOUND THEN RAISE EXCEPTION 'Permintaan transfer tidak ditemukan'; END IF;
+  IF t.status <> 'menunggu' THEN RAISE EXCEPTION 'Permintaan ini sudah %', t.status; END IF;
+
+  FOR v_sid IN SELECT (e->>'id')::UUID FROM jsonb_array_elements(t.siswa) e LOOP
+    UPDATE assignment SET penguji_id = t.ke_penguji_id
+      WHERE siswa_id = v_sid AND penguji_id = t.dari_penguji_id;
+    GET DIAGNOSTICS n_baris = ROW_COUNT;
+    IF n_baris > 0 THEN
+      n_pindah := n_pindah + 1;
+      UPDATE penilaian SET penguji_id = t.ke_penguji_id
+        WHERE siswa_id = v_sid AND penguji_id = t.dari_penguji_id;
+    END IF;
+  END LOOP;
+
+  UPDATE transfer_santri SET status = 'disetujui', jumlah_pindah = n_pindah, dijawab_pada = now() WHERE id = p_id;
+  RETURN json_build_object('pindah', n_pindah, 'diminta', jsonb_array_length(t.siswa));
+END $fn$;
+GRANT EXECUTE ON FUNCTION terima_transfer(UUID) TO anon, authenticated;
+
+NOTIFY pgrst, 'reload schema';
+
 select 'Database berhasil di-setup. Login: admin / admin123' as hasil;
