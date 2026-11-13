@@ -4479,6 +4479,7 @@ function openMenuSiswa() {
       ${item('downloadTemplateSiswa()', 'download', 'Unduh template Excel')}
       ${item('exportSiswaExcel()', 'table_view', 'Export daftar santri')}
       ${item('openBulkSetKategori()', 'category', 'Atur status beberapa santri sekaligus')}
+      ${item("bukaNaikKelas('siswa')", 'upgrade', 'Naik kelas / lulus')}
     </div>
   `);
 }
@@ -6542,8 +6543,14 @@ async function renderTabPeriode() {
         <button class="btn btn-primary btn-full" onclick="openFormTutupPeriode()">Arsipkan nilai &amp; mulai periode baru</button>
         <p class="text-small text-muted" style="margin-top:10px;line-height:1.5">
           Semua nilai periode ini disalin ke arsip, lalu nilai dan penugasan dikosongkan untuk ujian berikutnya.
-          Bisa sekaligus menaikkan kelas dan meluluskan kelas 9.
         </p>
+      </div>
+      <div class="card">
+        <div class="card-title">Naik kelas / lulus</div>
+        <p class="text-small text-muted" style="margin-bottom:12px;line-height:1.5">
+          Pilih sendiri santri yang naik kelas dan yang lulus. Santri yang tidak dipilih tetap di kelasnya.
+        </p>
+        <button class="btn btn-outline btn-full" onclick="bukaNaikKelas('pengaturan')">Atur naik kelas / lulus</button>
       </div>
       <div class="card">
         <div class="card-title">Arsip nilai</div>
@@ -6592,12 +6599,9 @@ function openFormTutupPeriode() {
         </select>
       </div>
     </div>
-    <div class="form-group">
-      <label style="display:flex;align-items:flex-start;gap:8px;margin:0;font-size:14px;color:var(--text)">
-        <input type="checkbox" id="tpNaik" ${genap ? 'checked' : ''} style="width:18px;height:18px;margin-top:2px;flex-shrink:0">
-        <span>Naikkan kelas: kelas 7 → 8 (${info.tingkat[7]} santri), kelas 8 → 9 (${info.tingkat[8]}), kelas 9 lulus (${info.tingkat[9]})</span>
-      </label>
-    </div>
+    <p class="text-small text-muted" style="margin-bottom:14px;line-height:1.5">
+      Kelas santri tidak diubah di sini. Setelah nilai diarsipkan, tentukan siapa yang naik kelas dan lulus lewat tombol <strong>Naik kelas / lulus</strong>.
+    </p>
     <div style="display:flex;gap:8px">
       <button class="btn btn-outline" style="flex:1" onclick="closeModal()">Batal</button>
       <button class="btn btn-primary" style="flex:1" onclick="submitTutupPeriode()">Lanjut</button>
@@ -6609,7 +6613,7 @@ function submitTutupPeriode() {
   const nama = document.getElementById('tpNama').value.trim();
   const ta = document.getElementById('tpTA').value.trim();
   const smt = document.getElementById('tpSmt').value;
-  const naik = document.getElementById('tpNaik').checked;
+  const naik = false; // naik kelas & lulus diatur per santri di layar tersendiri
   if (!nama) return showToast('⚠️ Nama arsip wajib diisi');
   if (!ta) return showToast('⚠️ Tahun ajaran baru wajib diisi');
   const info = window._periodeInfo || { jumlahNilai: 0 };
@@ -6617,7 +6621,7 @@ function submitTutupPeriode() {
   showConfirm(
     'Mulai periode baru?',
     `${info.jumlahNilai} nilai diarsipkan sebagai "${nama}". Nilai dan penugasan dikosongkan. `
-      + (naik ? 'Santri naik kelas dan kelas 9 diluluskan. ' : 'Kelas santri tidak diubah. ')
+      + 'Kelas santri tidak diubah. '
       + `Periode baru: ${ta} ${smt}. Tindakan ini tidak bisa dibatalkan dari aplikasi.`,
     async () => {
       showLoading('Mengarsipkan...');
@@ -6630,7 +6634,7 @@ function submitTutupPeriode() {
         STATE.kelasArsip = [];
         hideLoading();
         const h = data || {};
-        showToast(`✅ ${h.diarsipkan ?? 0} nilai diarsipkan` + (naik ? ` · ${h.naik_kelas ?? 0} naik kelas · ${h.lulus ?? 0} lulus` : ''), 6000);
+        showToast(`✅ ${h.diarsipkan ?? 0} nilai diarsipkan. Lanjutkan dengan Naik kelas / lulus bila berganti tahun ajaran.`, 6000);
         renderTabPeriode();
       } catch (e) {
         hideLoading();
@@ -6638,6 +6642,174 @@ function submitTutupPeriode() {
       }
     },
     '📦', 'Ya, arsipkan', 'btn-primary'
+  );
+}
+
+// ═════════════════════════════════════════════════════════════════
+// NAIK KELAS / LULUS — admin memilih santri satu per satu
+// Dicentang  : kelas 7/8 naik ke kelas tujuan, kelas 9 menjadi lulus
+// Tidak dicentang : tetap di kelasnya (tinggal kelas / belum lulus)
+// ═════════════════════════════════════════════════════════════════
+let NAIK = null; // { asal, grup: [{ kelas, tingkat, target, siswa: [{ id, nama, cek }] }], jumlahNilai }
+
+async function bukaNaikKelas(asal) {
+  showLoading('Memuat...');
+  try {
+    const [sRes, pRes] = await Promise.all([
+      sb.from('siswa').select('id, nama, kelas').eq('lulus', false).order('nama'),
+      sb.from('penilaian').select('id')
+    ]);
+    if (sRes.error) throw sRes.error;
+    if (pRes.error) throw pRes.error;
+    const peta = {};
+    (sRes.data || []).forEach(x => {
+      const kelas = (x.kelas || '').trim();
+      const m = kelas.match(/[789]/);
+      if (!m) return; // kelas tanpa angka 7/8/9 tidak ikut
+      if (!peta[kelas]) {
+        const tingkat = Number(m[0]);
+        peta[kelas] = { kelas, tingkat, target: tingkat < 9 ? kelas.replace(m[0], String(tingkat + 1)) : '', siswa: [] };
+      }
+      peta[kelas].siswa.push({ id: x.id, nama: x.nama, cek: true });
+    });
+    // Usulan tahun lulus: tahun ajaran sebelum periode berjalan bila sekarang semester Ganjil
+    const l = STATE.lembaga || {};
+    let tahunLulus = l.tahun_ajaran || '';
+    const mt = String(tahunLulus).match(/^(\d{4})\/(\d{4})$/);
+    if (mt && l.semester !== 'Genap') tahunLulus = `${Number(mt[1]) - 1}/${Number(mt[2]) - 1}`;
+    NAIK = {
+      asal: asal || 'siswa',
+      grup: Object.values(peta).sort((a, b) => a.kelas.localeCompare(b.kelas)),
+      jumlahNilai: pRes.data.length,
+      tahunLulus
+    };
+    hideLoading();
+    renderNaikKelas();
+  } catch (e) {
+    hideLoading();
+    showToast('❌ ' + pesanError(e));
+  }
+}
+
+function renderNaikKelas() {
+  const n = NAIK;
+  document.body.classList.add('mode-form');
+  const terkunci = n.jumlahNilai > 0;
+  document.getElementById('main-content').innerHTML = `
+    <div class="v-formhead">
+      <button class="v-back" aria-label="Kembali" onclick="showPage('${n.asal}')">
+        <span class="material-symbols-outlined">arrow_back</span>
+      </button>
+      <div class="v-formhead-info">
+        <div class="v-title">Naik kelas / lulus</div>
+        <div class="v-sub">Hilangkan centang pada santri yang tetap di kelasnya</div>
+      </div>
+    </div>
+
+    ${terkunci ? `
+      <div class="alert alert-warning" style="margin-bottom:12px">
+        <div style="flex:1">
+          <div style="font-weight:800">Masih ada ${n.jumlahNilai} nilai pada periode ini</div>
+          <div class="text-small">Arsipkan dulu nilainya di Pengaturan → Tahun ajaran. Kalau kelas diubah sekarang, target juz nilai yang sudah ada menjadi tidak cocok.</div>
+        </div>
+      </div>` : ''}
+
+    ${n.grup.length ? '' : '<div class="v-empty">Tidak ada santri aktif di kelas 7, 8, atau 9.</div>'}
+
+    ${n.grup.map((g, gi) => `
+      <div class="card" style="padding:14px">
+        <div class="flex-row flex-between" style="gap:8px;margin-bottom:10px">
+          <div style="font-size:15px;font-weight:800">Kelas ${escapeHtml(g.kelas)} <span class="text-muted" style="font-weight:600">· ${g.siswa.length} santri</span></div>
+          <button class="v-link" onclick="naikPilihSemua(${gi})">Pilih semua / kosongkan</button>
+        </div>
+        ${g.tingkat < 9 ? `
+          <label style="display:flex;align-items:center;gap:8px;margin-bottom:10px;font-size:14px;color:var(--text)">
+            <span style="white-space:nowrap">Yang dicentang naik ke kelas</span>
+            <input type="text" value="${escapeHtml(g.target)}" oninput="NAIK.grup[${gi}].target = this.value.trim()" style="width:90px;min-height:40px;text-align:center;font-weight:700">
+          </label>` : `
+          <p style="font-size:14px;margin-bottom:10px">Yang dicentang <strong>lulus</strong>.</p>`}
+        ${g.siswa.map((x, si) => `
+          <label style="display:flex;align-items:center;gap:10px;min-height:44px;margin:0;font-size:14px;color:var(--text);border-top:1px solid var(--line)">
+            <input type="checkbox" ${x.cek ? 'checked' : ''} onchange="NAIK.grup[${gi}].siswa[${si}].cek = this.checked; updateRingkasanNaik()" style="width:18px;height:18px;flex-shrink:0">
+            <span>${escapeHtml(x.nama)}</span>
+          </label>`).join('')}
+      </div>`).join('')}
+
+    ${n.grup.some(g => g.tingkat === 9) ? `
+      <div class="card" style="padding:14px">
+        <label style="margin-bottom:6px;font-size:14px;color:var(--text)">Tahun ajaran kelulusan</label>
+        <input type="text" value="${escapeHtml(n.tahunLulus)}" oninput="NAIK.tahunLulus = this.value.trim()" placeholder="2025/2026">
+      </div>` : ''}
+
+    <div class="v-footer"><div class="v-footer-inner">
+      <div id="ringkasanNaik" style="font-size:13px;font-weight:700"></div>
+      <button class="btn btn-primary btn-full" onclick="terapkanNaikKelas()" ${terkunci || !n.grup.length ? 'disabled' : ''}>Terapkan</button>
+    </div></div>
+  `;
+  updateRingkasanNaik();
+}
+
+function hitungNaik() {
+  let naik = 0, lulus = 0, tetap = 0;
+  NAIK.grup.forEach(g => g.siswa.forEach(x => {
+    if (!x.cek) tetap++; else if (g.tingkat === 9) lulus++; else naik++;
+  }));
+  return { naik, lulus, tetap };
+}
+
+function updateRingkasanNaik() {
+  const el = document.getElementById('ringkasanNaik');
+  if (!el) return;
+  const h = hitungNaik();
+  el.textContent = `${h.naik} naik kelas · ${h.lulus} lulus · ${h.tetap} tetap di kelasnya`;
+}
+
+function naikPilihSemua(gi) {
+  const g = NAIK.grup[gi];
+  const semua = g.siswa.every(x => x.cek);
+  g.siswa.forEach(x => { x.cek = !semua; });
+  renderNaikKelas();
+}
+
+function terapkanNaikKelas() {
+  const n = NAIK;
+  const h = hitungNaik();
+  if (!h.naik && !h.lulus) return showToast('⚠️ Tidak ada santri yang dicentang');
+  const tanpaTujuan = n.grup.find(g => g.tingkat < 9 && g.siswa.some(x => x.cek) && !g.target);
+  if (tanpaTujuan) return showToast(`⚠️ Isi kelas tujuan untuk kelas ${tanpaTujuan.kelas}`);
+  const rinci = n.grup.filter(g => g.siswa.some(x => x.cek))
+    .map(g => `${g.kelas} → ${g.tingkat === 9 ? 'lulus' : g.target} (${g.siswa.filter(x => x.cek).length})`).join(', ');
+  showConfirm(
+    'Terapkan naik kelas / lulus?',
+    `${h.naik} santri naik kelas, ${h.lulus} lulus, ${h.tetap} tetap di kelasnya. ${rinci}.`,
+    async () => {
+      showLoading('Menerapkan...');
+      try {
+        const perbarui = async (ids, upd) => {
+          for (let i = 0; i < ids.length; i += 100) {
+            const { error } = await sb.from('siswa').update(upd).in('id', ids.slice(i, i + 100));
+            if (error) throw error;
+          }
+        };
+        for (const g of n.grup) {
+          const ids = g.siswa.filter(x => x.cek).map(x => x.id);
+          if (!ids.length) continue;
+          if (g.tingkat === 9) {
+            await perbarui(ids, { lulus: true, tahun_lulus: n.tahunLulus || null, status_dikunci: false });
+          } else {
+            await perbarui(ids, { kelas: g.target, status_dikunci: false });
+          }
+        }
+        hideLoading();
+        showToast(`✅ ${h.naik} naik kelas · ${h.lulus} lulus · ${h.tetap} tetap`, 5000);
+        SISWA_TAB = 'aktif';
+        showPage('siswa');
+      } catch (e) {
+        hideLoading();
+        showToast('❌ ' + pesanError(e) + ' Sebagian kelas mungkin sudah berubah; buka lagi layar ini untuk memeriksa.', 7000);
+      }
+    },
+    '🎓', 'Ya, terapkan', 'btn-primary'
   );
 }
 
