@@ -1115,6 +1115,21 @@
   .v-akhir span { font-size: 11px; font-weight: 700; color: var(--text-muted); }
   .v-akhir b { font-size: 26px; font-weight: 800; line-height: 1.1; }
 
+
+  /* ── Rekap: filter dropdown + ringkasan satu baris ── */
+  .v-pagehead { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .v-filter { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px 10px; margin-bottom: 12px; }
+  .v-filter:empty { display: none; }
+  @media (min-width: 620px) { .v-filter { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+  .v-field label { margin-bottom: 4px; }
+  .v-field select { padding: 0 34px 0 12px; font-size: 14px; font-weight: 600; text-overflow: ellipsis; }
+  .v-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); background: #fff; border: 1px solid var(--line); border-radius: 14px; margin-bottom: 12px; }
+  .v-stats > div { padding: 10px 4px; text-align: center; display: flex; flex-direction: column; gap: 2px; border-left: 1px solid var(--line); min-width: 0; }
+  .v-stats > div:first-child { border-left: none; }
+  .v-stats b { font-size: 18px; font-weight: 800; line-height: 1.2; }
+  .v-stats span { font-size: 12px; font-weight: 600; color: var(--text-muted); }
+  .v-nilai { width: 44px; height: 44px; border-radius: 10px; color: #fff; font-size: 16px; font-weight: 800; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+
   /* ── Penugasan (admin): dikelompokkan per penguji ── */
   .v-group { border: 1px solid var(--line); border-radius: 14px; background: #fff; margin-bottom: 8px; overflow: hidden; }
   .v-group > summary { list-style: none; cursor: pointer; padding: 14px; display: flex; flex-direction: column; gap: 8px; }
@@ -1722,6 +1737,13 @@ function warnaNilai(n) {
   if (n >= 80) return '#2563eb';
   if (n >= 70) return '#d97706';
   return '#dc2626';
+}
+// Warna latar lencana nilai (teks putih di atasnya tetap terbaca)
+function warnaLencana(n) {
+  if (n >= 90) return '#047857';
+  if (n >= 80) return '#1D4ED8';
+  if (n >= 70) return '#B45309';
+  return '#B91C1C';
 }
 function predikat(n) {
   if (n >= 90) return 'Mumtaz';
@@ -3719,12 +3741,6 @@ async function hapusPenilaian() {
 // ═════════════════════════════════════════════════════════════════
 // HALAMAN: REKAP
 // ═════════════════════════════════════════════════════════════════
-function pilihRekapPeriode(i) {
-  STATE.rekapPeriode = i < 0 ? null : (window._rekapPeriodeList || [])[i] || null;
-  STATE.filter.kelas = 'all'; STATE.filter.penguji = 'all'; STATE.filter.kategori = 'all';
-  renderRekap();
-}
-
 // Nilai arsip, dibentuk seperti hasil fetchAllPenilaianLengkap supaya tampilan & export yang sama bisa dipakai
 async function fetchArsipPeriode(periode) {
   const { data, error } = await sb.from('arsip_nilai').select('*').eq('periode', periode).order('nama');
@@ -3739,152 +3755,170 @@ async function fetchArsipPeriode(periode) {
   }));
 }
 
+// Data rekap dimuat sekali per periode; filter & pencarian hanya menyaring ulang di perangkat
+let REKAP = { data: [], dariArsip: false, canSeeAll: false, daftarArsip: [], q: '' };
+
 async function renderRekap() {
   const c = document.getElementById('main-content');
   c.innerHTML = `
-    <div class="page-header">
+    <div class="page-header v-pagehead">
       <h2>Rekap Nilai</h2>
-      <p>Ringkasan hasil penilaian tahfidz</p>
+      <button class="btn btn-outline btn-sm" id="btnExportRekap" onclick="exportRekapExcel()" style="display:none">
+        <span class="material-symbols-outlined" style="font-size:17px">download</span> Export Excel
+      </button>
     </div>
-    <div id="rekapPeriode"></div>
+    <div id="rekapFilter"></div>
     <div id="rekapBody"><div class="card"><div class="text-center" style="padding:30px"><div class="spinner"></div></div></div></div>
   `;
 
   try {
-    const isAdmin = STATE.user.role === 'admin';
-    const isKetuaTahfidz = STATE.user.role === 'ketua_tahfidz';
-    const canSeeAll = isAdmin || isKetuaTahfidz;
+    const role = STATE.user.role;
+    const canSeeAll = role === 'admin' || role === 'ketua_tahfidz';
 
-    // Pilihan periode: berjalan + yang sudah diarsipkan
     const daftarArsip = await fetchDaftarPeriodeArsip();
     if (STATE.rekapPeriode && !daftarArsip.some(a => a.periode === STATE.rekapPeriode)) STATE.rekapPeriode = null;
     const dariArsip = !!STATE.rekapPeriode;
-    window._rekapPeriodeList = daftarArsip.map(a => a.periode);
-    document.getElementById('rekapPeriode').innerHTML = daftarArsip.length ? `
-      <div class="filter-bar">
-        <button class="filter-chip ${!dariArsip ? 'active' : ''}" onclick="pilihRekapPeriode(-1)">Periode ini</button>
-        ${daftarArsip.map((a, i) => `<button class="filter-chip ${STATE.rekapPeriode === a.periode ? 'active' : ''}" onclick="pilihRekapPeriode(${i})">${escapeHtml(a.periode)}</button>`).join('')}
-      </div>` : '';
 
-    let allData = dariArsip ? await fetchArsipPeriode(STATE.rekapPeriode) : await fetchAllPenilaianLengkap();
+    let data = dariArsip ? await fetchArsipPeriode(STATE.rekapPeriode) : await fetchAllPenilaianLengkap();
     // Penguji biasa hanya lihat rekapnya sendiri
-    if (!canSeeAll) {
-      allData = allData.filter(p => p.penguji?.id === STATE.user.id);
-    }
-    const data = allData;
-    if (!data.length) {
-      document.getElementById('rekapBody').innerHTML = `
-        <div class="empty-state">
-          <div class="empty-icon">📊</div>
-          <p>${dariArsip ? 'Tidak ada nilai di arsip ini.' : 'Belum ada penilaian yang tersimpan pada periode ini.'}</p>
-        </div>`;
-      return;
-    }
+    if (!canSeeAll) data = data.filter(p => p.penguji?.id === STATE.user.id);
+    // Kelas yang diarsipkan disembunyikan dari periode berjalan
+    if (!dariArsip) data = data.filter(p => !STATE.kelasArsip.includes(p.siswa?.kelas));
 
-    // Kelompokkan kelas untuk filter (exclude arsip)
-    const kelasSet = [...new Set(data.map(p => p.siswa?.kelas).filter(k => k && (dariArsip || !STATE.kelasArsip.includes(k))))].sort();
-    const pengujiSet = canSeeAll ? [...new Set(data.map(p => p.penguji?.nama).filter(Boolean))].sort() : [];
-
-    if (!STATE.filter.kategori) STATE.filter.kategori = 'all';
-
-    let filtered = data.filter(p => {
-      if (!dariArsip && STATE.kelasArsip.includes(p.siswa?.kelas)) return false;
-      if (STATE.filter.kelas !== 'all' && p.siswa?.kelas !== STATE.filter.kelas) return false;
-      if (canSeeAll && STATE.filter.penguji !== 'all' && p.penguji?.nama !== STATE.filter.penguji) return false;
-      if (STATE.filter.kategori !== 'all' && getKategori(p.siswa) !== STATE.filter.kategori) return false;
-      return true;
-    });
-
-    // Statistik
-    const nilaiAkhir = filtered.map(p => Number(p.nilai_akhir) || 0);
-    const rata = nilaiAkhir.length ? nilaiAkhir.reduce((a,b)=>a+b,0) / nilaiAkhir.length : 0;
-    const max = nilaiAkhir.length ? Math.max(...nilaiAkhir) : 0;
-    const min = nilaiAkhir.length ? Math.min(...nilaiAkhir) : 0;
-
-    document.getElementById('rekapBody').innerHTML = `
-      <!-- Filter Kelas -->
-      <div class="filter-bar">
-        <button class="filter-chip ${STATE.filter.kelas === 'all' ? 'active' : ''}" onclick="STATE.filter.kelas='all'; renderRekap()">Semua Kelas</button>
-        ${kelasSet.map(k => `<button class="filter-chip ${STATE.filter.kelas === k ? 'active' : ''}" onclick="STATE.filter.kelas='${escapeHtml(k)}'; renderRekap()">${escapeHtml(k)}</button>`).join('')}
-      </div>
-      <!-- Filter Kategori -->
-      <div class="filter-bar">
-        <button class="filter-chip ${STATE.filter.kategori === 'all' ? 'active' : ''}" onclick="STATE.filter.kategori='all'; renderRekap()">Semua Status</button>
-        ${KATEGORI_LIST.map(k => `<button class="filter-chip ${STATE.filter.kategori === k.value ? 'active' : ''}" onclick="STATE.filter.kategori='${k.value}'; renderRekap()">${k.label}</button>`).join('')}
-      </div>
-      ${pengujiSet.length > 1 ? `
-      <div class="filter-bar">
-        <button class="filter-chip ${STATE.filter.penguji === 'all' ? 'active' : ''}" onclick="STATE.filter.penguji='all'; renderRekap()">Semua Penguji</button>
-        ${pengujiSet.map(p => `<button class="filter-chip ${STATE.filter.penguji === p ? 'active' : ''}" onclick="STATE.filter.penguji='${escapeHtml(p)}'; renderRekap()">${escapeHtml(p)}</button>`).join('')}
-      </div>` : ''}
-
-      <div class="stats-grid">
-        <div class="stat-card stat-total">
-          <div class="stat-number">${filtered.length}</div>
-          <div class="stat-label">Siswa Dinilai</div>
-        </div>
-        <div class="stat-card stat-done">
-          <div class="stat-number" style="color:${warnaNilai(rata)}">${rata.toFixed(2)}</div>
-          <div class="stat-label">Rata-rata</div>
-        </div>
-      </div>
-      <div class="stats-grid">
-        <div class="stat-card">
-          <div class="stat-number" style="color:#059669">${max.toFixed(2)}</div>
-          <div class="stat-label">Tertinggi</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-number" style="color:#dc2626">${min.toFixed(2)}</div>
-          <div class="stat-label">Terendah</div>
-        </div>
-      </div>
-
-      <button class="btn btn-primary btn-full" onclick="exportRekapExcel()" style="margin-bottom:14px">
-        <span class="material-symbols-outlined" style="font-size:17px">table_view</span>
-        Export Excel
-      </button>
-
-      <div id="rekapList">
-        ${filtered.map(p => {
-          const s = p.siswa || {};
-          const pg = p.penguji || {};
-          const na = Number(p.nilai_akhir) || 0;
-          const katInfo = getKategoriInfo(s.kategori);
-          const kat = getKategori(s);
-          const kuantLabel = (kat === 'TAHAP_IQRA' && !p.hafalan_aktif && p.baca_lancar != null)
-            ? 'membaca saja'
-            : `${Number(p.jumlah_juz||0).toFixed(2).replace('.', ',')} juz`;
-          return `
-            <div class="list-item" onclick="detailRekap('${p.id}')" style="cursor:pointer">
-              <div class="list-avatar" style="background:${warnaNilai(na)};color:white">${Math.round(na)}</div>
-              <div class="list-info">
-                <div class="list-name">${escapeHtml(s.nama || '-')}</div>
-                <div class="list-meta">
-                  <span class="badge badge-blue">${escapeHtml(s.kelas || '-')}</span>
-                  <span class="${katInfo.badge} badge">${katInfo.label}</span>
-                  <span class="badge badge-purple">${escapeHtml(pg.nama || '-')}</span>
-                  <span>${p.nilai_detail?.length || 0} surah · ${kuantLabel}</span>
-                  <span class="badge" style="background:${warnaNilai(na)}20;color:${warnaNilai(na)}">${predikat(na)}</span>
-                </div>
-              </div>
-              <div class="list-actions">
-                <span class="material-symbols-outlined" style="color:var(--text-light)">chevron_right</span>
-              </div>
-            </div>
-          `;
-        }).join('')}
-      </div>
-    `;
-
-    // Simpan filtered untuk export
-    window._rekapFiltered = filtered;
+    REKAP = { data, dariArsip, canSeeAll, daftarArsip, q: '' };
+    renderRekapFilter();
+    renderRekapHasil();
   } catch (e) {
     document.getElementById('rekapBody').innerHTML = `
       <div class="alert alert-danger">
         <span class="material-symbols-outlined" style="font-size:15px">error</span>
-        <span>Gagal memuat rekap: ${escapeHtml(e.message)}</span>
+        <span>Gagal memuat rekap: ${escapeHtml(pesanError(e))}</span>
       </div>`;
   }
+}
+
+function setRekapFilter(key, val) {
+  if (key === 'periode') {
+    STATE.rekapPeriode = val === '' ? null : REKAP.daftarArsip[Number(val)]?.periode || null;
+    STATE.filter.kelas = 'all'; STATE.filter.penguji = 'all'; STATE.filter.kategori = 'all';
+    return renderRekap();
+  }
+  if (key === 'reset') {
+    STATE.filter.kelas = 'all'; STATE.filter.penguji = 'all'; STATE.filter.kategori = 'all';
+    REKAP.q = '';
+    renderRekapFilter();
+  } else if (key === 'q') {
+    REKAP.q = val;
+  } else {
+    STATE.filter[key] = val;
+  }
+  renderRekapHasil();
+}
+
+// Filter sebagai pilihan turun (dropdown): ringkas dan tetap muat walau penguji banyak
+function renderRekapFilter() {
+  const box = document.getElementById('rekapFilter');
+  if (!box) return;
+  const { data, dariArsip, canSeeAll, daftarArsip } = REKAP;
+  const kelasSet = [...new Set(data.map(p => p.siswa?.kelas).filter(Boolean))].sort();
+  const pengujiSet = canSeeAll ? [...new Set(data.map(p => p.penguji?.nama).filter(Boolean))].sort((a, b) => a.localeCompare(b)) : [];
+  if (!kelasSet.includes(STATE.filter.kelas)) STATE.filter.kelas = 'all';
+  if (!pengujiSet.includes(STATE.filter.penguji)) STATE.filter.penguji = 'all';
+  if (!STATE.filter.kategori) STATE.filter.kategori = 'all';
+
+  const pilih = (id, label, key, opsi, nilai) => `
+    <div class="v-field">
+      <label for="${id}">${label}</label>
+      <select id="${id}" onchange="setRekapFilter('${key}', this.value)">
+        ${opsi.map(([v, t]) => `<option value="${escapeHtml(v)}" ${String(v) === String(nilai) ? 'selected' : ''}>${escapeHtml(t)}</option>`).join('')}
+      </select>
+    </div>`;
+
+  const idxPeriode = daftarArsip.findIndex(a => a.periode === STATE.rekapPeriode);
+  box.innerHTML = `
+    ${data.length ? `
+    <label class="v-search">
+      <span class="material-symbols-outlined" aria-hidden="true">search</span>
+      <input type="text" id="rekapCari" placeholder="Cari nama santri" aria-label="Cari nama santri"
+             value="${escapeHtml(REKAP.q)}" oninput="setRekapFilter('q', this.value)">
+    </label>` : ''}
+    <div class="v-filter">
+      ${daftarArsip.length ? pilih('rfPeriode', 'Periode', 'periode',
+          [['', 'Periode ini']].concat(daftarArsip.map((a, i) => [String(i), a.periode])), idxPeriode < 0 ? '' : idxPeriode) : ''}
+      ${kelasSet.length > 1 ? pilih('rfKelas', 'Kelas', 'kelas',
+          [['all', 'Semua kelas']].concat(kelasSet.map(k => [k, k])), STATE.filter.kelas) : ''}
+      ${data.length ? pilih('rfStatus', 'Status', 'kategori',
+          [['all', 'Semua status']].concat(KATEGORI_LIST.map(k => [k.value, k.label])), STATE.filter.kategori) : ''}
+      ${pengujiSet.length > 1 ? pilih('rfPenguji', 'Penguji', 'penguji',
+          [['all', 'Semua penguji']].concat(pengujiSet.map(n => [n, n])), STATE.filter.penguji) : ''}
+    </div>
+  `;
+}
+
+function renderRekapHasil() {
+  const body = document.getElementById('rekapBody');
+  if (!body) return;
+  const { data, dariArsip, canSeeAll } = REKAP;
+  const btn = document.getElementById('btnExportRekap');
+
+  if (!data.length) {
+    if (btn) btn.style.display = 'none';
+    window._rekapFiltered = [];
+    body.innerHTML = `<div class="v-empty">${dariArsip ? 'Tidak ada nilai di arsip ini.' : 'Belum ada penilaian yang tersimpan pada periode ini.'}</div>`;
+    return;
+  }
+
+  const needle = REKAP.q.toLowerCase().trim();
+  const filtered = data.filter(p => {
+    if (STATE.filter.kelas !== 'all' && p.siswa?.kelas !== STATE.filter.kelas) return false;
+    if (canSeeAll && STATE.filter.penguji !== 'all' && p.penguji?.nama !== STATE.filter.penguji) return false;
+    if (STATE.filter.kategori !== 'all' && getKategori(p.siswa) !== STATE.filter.kategori) return false;
+    if (needle && !(p.siswa?.nama || '').toLowerCase().includes(needle)) return false;
+    return true;
+  });
+  window._rekapFiltered = filtered; // dipakai export & detail
+  if (btn) btn.style.display = filtered.length ? '' : 'none';
+
+  const nilaiAkhir = filtered.map(p => Number(p.nilai_akhir) || 0);
+  const rata = nilaiAkhir.length ? nilaiAkhir.reduce((a, b) => a + b, 0) / nilaiAkhir.length : 0;
+  const max = nilaiAkhir.length ? Math.max(...nilaiAkhir) : 0;
+  const min = nilaiAkhir.length ? Math.min(...nilaiAkhir) : 0;
+  const adaFilter = STATE.filter.kelas !== 'all' || STATE.filter.penguji !== 'all' || STATE.filter.kategori !== 'all' || !!needle;
+  const f = n => nilaiAkhir.length ? n.toFixed(2) : '—';
+
+  body.innerHTML = `
+    <div class="v-stats" role="group" aria-label="Ringkasan nilai">
+      <div><b>${filtered.length}</b><span>Santri</span></div>
+      <div><b>${f(rata)}</b><span>Rata-rata</span></div>
+      <div><b>${f(max)}</b><span>Tertinggi</span></div>
+      <div><b>${f(min)}</b><span>Terendah</span></div>
+    </div>
+    ${adaFilter ? `
+      <div class="flex-row flex-between" style="margin-bottom:8px">
+        <span class="text-small text-muted">${filtered.length} dari ${data.length} nilai</span>
+        <button class="v-link" onclick="setRekapFilter('reset')">Hapus filter</button>
+      </div>` : ''}
+    <div id="rekapList">
+      ${filtered.length ? filtered.map(p => {
+        const s = p.siswa || {};
+        const na = Number(p.nilai_akhir) || 0;
+        const iqra = getKategori(s) === 'TAHAP_IQRA';
+        const kuantLabel = (iqra && !p.hafalan_aktif && p.baca_lancar != null)
+          ? 'membaca saja'
+          : `${p.nilai_detail?.length || 0} surah · ${Number(p.jumlah_juz || 0).toFixed(2).replace('.', ',')} juz`;
+        return `
+          <button class="v-row" onclick="detailRekap('${p.id}')">
+            <span class="v-nilai" style="background:${warnaLencana(na)}">${Math.round(na)}</span>
+            <span class="v-row-info">
+              <span class="v-row-nama">${escapeHtml(s.nama || '-')}</span>
+              <span class="v-row-ket">${escapeHtml(s.kelas || '-')} · ${getKategoriInfo(s.kategori).label} · ${kuantLabel} · ${predikat(na)}</span>
+              ${canSeeAll ? `<span class="v-row-ket">Penguji: ${escapeHtml(p.penguji?.nama || '-')}</span>` : ''}
+            </span>
+            <span class="material-symbols-outlined" aria-hidden="true">chevron_right</span>
+          </button>`;
+      }).join('') : '<div class="v-empty">Tidak ada nilai yang cocok dengan filter.</div>'}
+    </div>
+  `;
 }
 
 // Rincian komponen nilai untuk modal detail rekap
