@@ -195,7 +195,7 @@ Nilai lama **tidak dihapus**: disalin ke arsip dan tetap bisa dilihat serta di-e
 1. **Cek proyek Supabase** di https://supabase.com/dashboard. Proyek gratis otomatis di-*pause* kalau lama tidak dipakai; klik **Restore** bila statusnya *Paused*.
 2. Bila aplikasi menampilkan **"Database perlu diperbarui"**: login sebagai admin, salin SQL yang ditampilkan, jalankan di Supabase → SQL Editor, lalu tekan *Periksa lagi*.
 3. **Pengaturan → Tahun ajaran → Arsipkan nilai & mulai periode baru**:
-   - beri nama arsip untuk nilai yang sekarang (mis. ),
+   - beri nama arsip untuk nilai yang sekarang (mis. `2025/2026 Genap`),
    - isi tahun ajaran dan semester baru,
    - centang **Naikkan kelas** bila berganti tahun ajaran: kelas 7 → 8, kelas 8 → 9, kelas 9 menjadi *lulus*.
 
