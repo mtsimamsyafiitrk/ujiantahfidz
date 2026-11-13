@@ -1160,6 +1160,7 @@ function hitungKuantitasIqra(baris) {
   for (const b of baris) {
     if (!b.surah_nama) continue;
     if (!SURAH_TARGET_IQRA.includes(b.surah_nama)) continue;
+    if (setor.includes(b.surah_nama)) continue; // surah yang sama diisi 2x → dihitung sekali
     if (hitungTotal(b) >= getAmbangSetoran('TAHAP_IQRA')) setor.push(b.surah_nama);
   }
   const count = setor.length;
@@ -1205,6 +1206,15 @@ function isPeriodeKehadiranAktif() {
     + String(_d.getMonth()+1).padStart(2,'0') + '-'
     + String(_d.getDate()).padStart(2,'0');
   return KEHADIRAN_TANGGAL.includes(today);
+}
+
+// Tanggal hari ini (YYYY-MM-DD) menurut jam lokal perangkat, BUKAN UTC.
+// toISOString() memakai UTC sehingga sebelum pukul 08.00 WITA hasilnya masih tanggal kemarin.
+function todayLocal() {
+  const d = new Date();
+  return d.getFullYear() + '-'
+    + String(d.getMonth() + 1).padStart(2, '0') + '-'
+    + String(d.getDate()).padStart(2, '0');
 }
 
 function fmtTanggalIndo(tgl) {
@@ -1255,7 +1265,7 @@ const SURAH_JUZ = {
   'Al-Ahzab':      [{ juz:21, dari:1, sampai:30 }, { juz:22, dari:31, sampai:73 }],
   'Saba':          [{ juz:22, dari:1, sampai:54 }],
   'Fatir':         [{ juz:22, dari:1, sampai:45 }],
-  'Ya Sin':        [{ juz:22, dari:1, sampai:21 }, { juz:23, dari:22, sampai:83 }],
+  'Ya Sin':        [{ juz:22, dari:1, sampai:27 }, { juz:23, dari:28, sampai:83 }],
   'As-Saffat':     [{ juz:23, dari:1, sampai:182 }],
   'Sad':           [{ juz:23, dari:1, sampai:88 }],
   'Az-Zumar':      [{ juz:23, dari:1, sampai:31 }, { juz:24, dari:32, sampai:75 }],
@@ -1371,6 +1381,8 @@ function hitungJuzOtomatis(baris, ambang) {
 
     const mapping = SURAH_JUZ[b.surah_nama];
     if (!mapping) continue; // surah tidak ada di data baku (misal custom)
+    // Surah yang sama diisi 2x → ayatnya hanya dihitung sekali
+    if (surahTersetor.some(x => x.nama === b.surah_nama)) continue;
 
     surahTersetor.push({ nama: b.surah_nama, nilai: nilaiSurah });
     mapping.forEach(({ juz, dari, sampai }) => {
@@ -1412,7 +1424,7 @@ if (CONFIG_OK) {
 const STATE = {
   user: null,            // { id, username, nama, role }
   page: 'home',
-  lembaga: { nama: 'MTs Al Imam Asy-Syafi\'i', alamat: 'Tarakan', tahun_ajaran: '2025/2026' },
+  lembaga: { nama: 'MTs Al Imam Asy-Syafi\'i', alamat: 'Tarakan', tahun_ajaran: '2026/2027' },
   cache: {
     siswa: [],
     penguji: [],
@@ -1707,9 +1719,15 @@ async function handleLogin() {
   try {
     const hash = await sha256(password);
     const { data, error } = await sb.from('penguji')
-      .select('*').eq('username', username).single();
+      .select('*').eq('username', username).maybeSingle();
 
-    if (error || !data) {
+    if (error) {
+      // Bedakan "server tidak bisa dihubungi" dari "username salah"
+      showToast('❌ Tidak dapat terhubung ke database. Periksa internet, atau minta admin mengecek status proyek Supabase.', 6000);
+      btn.disabled = false; btn.innerHTML = oldHtml;
+      return;
+    }
+    if (!data) {
       showToast('❌ Username tidak ditemukan');
       btn.disabled = false; btn.innerHTML = oldHtml;
       return;
@@ -2493,7 +2511,7 @@ function exportKehadiranExcel() {
   ws2['!cols'] = [{wch:24},{wch:12},{wch:18},{wch:6},{wch:30}];
   XLSX.utils.book_append_sheet(wb, ws2, 'Detail');
 
-  XLSX.writeFile(wb, `Rekap_Kehadiran_${new Date().toISOString().slice(0,10)}.xlsx`);
+  XLSX.writeFile(wb, `Rekap_Kehadiran_${todayLocal()}.xlsx`);
   showToast('✅ Excel tersimpan');
 }
 
@@ -2597,7 +2615,7 @@ async function exportKehadiranPDF() {
     doc.setTextColor(60, 60, 60);
     doc.text('Keterangan: H = Hadir (1 poin), I = Izin (0), S = Sakit (0), T = Tanpa Keterangan (0)', margin, finalY);
 
-    doc.save(`Rekap_Kehadiran_${new Date().toISOString().slice(0,10)}.pdf`);
+    doc.save(`Rekap_Kehadiran_${todayLocal()}.pdf`);
     hideLoading();
     showToast('✅ PDF tersimpan');
   } catch (err) {
@@ -2890,7 +2908,7 @@ async function openFormPenilaian(siswaId, pengujiId) {
     FORM_STATE = {
       siswa, penguji,
       penilaianId: existing?.id || null,
-      tanggal: existing?.tanggal_ujian || new Date().toISOString().slice(0,10),
+      tanggal: existing?.tanggal_ujian || todayLocal(),
       catatan: existing?.catatan || '',
       jumlah_juz: existing?.jumlah_juz ?? '',
       juzManualOverride: autoOverride,  // auto-detect dari data lama
@@ -3486,6 +3504,10 @@ async function simpanPenilaian() {
 
   const tanggal = document.getElementById('fTanggal').value;
   const catatan = document.getElementById('fCatatan').value.trim();
+  if (!tanggal) {
+    showToast('⚠️ Tanggal ujian wajib diisi');
+    return;
+  }
 
   // Hitung nilai
   const totals = validBaris.map(b => hitungTotal(b));
@@ -3528,6 +3550,9 @@ async function simpanPenilaian() {
         .select().single();
       if (eIns) throw eIns;
       penilaianId = newP.id;
+      // Catat id-nya sekarang: kalau langkah berikutnya gagal (mis. sinyal putus) lalu
+      // penguji menekan Simpan lagi, yang terjadi update — bukan insert kedua (duplicate key).
+      FORM_STATE.penilaianId = penilaianId;
     }
 
     // Insert detail
@@ -3569,14 +3594,17 @@ async function hapusPenilaian() {
       showLoading('Menghapus...');
       try {
         // Hapus detail dulu (ON DELETE CASCADE sebenarnya sudah handle, tapi eksplisit)
-        await sb.from('nilai_detail').delete().eq('penilaian_id', FORM_STATE.penilaianId);
-        await sb.from('penilaian').delete().eq('id', FORM_STATE.penilaianId);
+        const { error: e1 } = await sb.from('nilai_detail').delete().eq('penilaian_id', FORM_STATE.penilaianId);
+        if (e1) throw e1;
+        const { error: e2 } = await sb.from('penilaian').delete().eq('id', FORM_STATE.penilaianId);
+        if (e2) throw e2;
 
         // Kembalikan status assignment ke 'belum'
-        await sb.from('assignment')
+        const { error: e3 } = await sb.from('assignment')
           .update({ status: 'belum' })
           .eq('siswa_id', FORM_STATE.siswa.id)
           .eq('penguji_id', FORM_STATE.penguji.id);
+        if (e3) throw e3;
 
         hideLoading();
         showToast('🗑️ Penilaian dihapus');
@@ -3893,7 +3921,7 @@ function exportRekapExcel() {
   XLSX.utils.book_append_sheet(wb, ws1, 'Rekap Nilai');
   XLSX.utils.book_append_sheet(wb, ws2, 'Detail Surah');
 
-  const fname = `Rekap_Tahfidz_${new Date().toISOString().slice(0,10)}.xlsx`;
+  const fname = `Rekap_Tahfidz_${todayLocal()}.xlsx`;
   XLSX.writeFile(wb, fname);
   showToast('✅ Excel tersimpan: ' + fname);
 }
@@ -4229,7 +4257,7 @@ async function renderAdminLembagaOnly() {
       </div>
       <div class="form-group">
         <label>Tahun Ajaran</label>
-        <input type="text" id="lbTA" value="${escapeHtml(l.tahun_ajaran || '')}" placeholder="2025/2026">
+        <input type="text" id="lbTA" value="${escapeHtml(l.tahun_ajaran || '')}" placeholder="2026/2027">
       </div>
       <button class="btn btn-primary btn-full" onclick="saveLembaga()">
         <span class="material-symbols-outlined" style="font-size:15px">save</span> Simpan
@@ -4293,6 +4321,13 @@ UPDATE siswa SET kategori = 'ALQURAN_LANJUT' WHERE kategori IS NULL;</pre>
       <button class="btn btn-outline btn-full btn-sm" style="color:var(--danger);border-color:var(--danger)" onclick="resetAllPenilaian()">
         <span class="material-symbols-outlined" style="font-size:14px">delete_sweep</span>
         Hapus Semua Penilaian
+      </button>
+      <p class="text-small text-muted" style="margin:14px 0 8px">
+        <strong>Tahun ajaran baru:</strong> Export data siswa &amp; rekap nilai dulu sebagai arsip, lalu kosongkan data siswa lama dan import daftar siswa yang baru.
+      </p>
+      <button class="btn btn-outline btn-full btn-sm" style="color:var(--danger);border-color:var(--danger)" onclick="resetAllSiswa()">
+        <span class="material-symbols-outlined" style="font-size:14px">group_remove</span>
+        Hapus Semua Siswa, Assignment &amp; Penilaian
       </button>
     </div>
   `;
@@ -4451,7 +4486,7 @@ function openFormSiswa(existing = null) {
     </div>
     <div class="form-group">
       <label>Tahun Ajaran</label>
-      <input type="text" id="sfTA" value="${escapeHtml(s.tahun_ajaran || '')}" placeholder="2025/2026">
+      <input type="text" id="sfTA" value="${escapeHtml(s.tahun_ajaran || '')}" placeholder="2026/2027">
     </div>
     <div style="display:flex;gap:8px">
       <button class="btn btn-outline" style="flex:1" onclick="closeModal()">Batal</button>
@@ -4487,9 +4522,14 @@ async function submitSiswa(id) {
       if (error) throw error;
       siswaId = newS.id;
     }
-    // Recalculate penilaian if kategori changed
-    if (id && payload.kategori) {
-      await recalcPenilaianForSiswa(id, payload);
+    // Hitung ulang penilaian HANYA kalau kategori/kelas berubah (target kuantitas ikut berubah).
+    // Edit lain (nama, NISN, dst.) tidak boleh menimpa nilai — termasuk override manual admin.
+    if (id) {
+      const lama = (window._siswaCache || []).find(x => x.id === id);
+      const berubah = !lama
+        || getKategori(lama) !== payload.kategori
+        || (lama.kelas || '') !== payload.kelas;
+      if (berubah) await recalcPenilaianForSiswa(id, payload);
     }
     hideLoading();
     closeModal();
@@ -4523,11 +4563,12 @@ function deleteSiswa(id) {
 }
 
 function downloadTemplateSiswa() {
+  const ta = STATE.lembaga?.tahun_ajaran || '2026/2027';
   const data = [
     ['nama','nisn','kelas','semester','jenis_kelamin','tahun_ajaran','kategori'],
-    ['Ahmad Fulan','1234567890','7A','Ganjil','L','2025/2026','ALQURAN_LANJUT'],
-    ['Siti Aisyah','0987654321','7B','Ganjil','P','2025/2026','ALQURAN_PEMULA'],
-    ['Budi Santoso','1122334455','7C','Ganjil','L','2025/2026','TAHAP_IQRA']
+    ['Ahmad Fulan','1234567890','7A','Ganjil','L',ta,'ALQURAN_LANJUT'],
+    ['Siti Aisyah','0987654321','7B','Ganjil','P',ta,'ALQURAN_PEMULA'],
+    ['Budi Santoso','1122334455','7C','Ganjil','L',ta,'TAHAP_IQRA']
   ];
   const wb = XLSX.utils.book_new();
   const ws = XLSX.utils.aoa_to_sheet(data);
@@ -4557,7 +4598,7 @@ function exportSiswaExcel() {
   const ws = XLSX.utils.aoa_to_sheet(data);
   ws['!cols'] = [{wch:4},{wch:22},{wch:14},{wch:10},{wch:16},{wch:10},{wch:12},{wch:12}];
   XLSX.utils.book_append_sheet(wb, ws, 'Siswa');
-  XLSX.writeFile(wb, `Data_Siswa_${new Date().toISOString().slice(0,10)}.xlsx`);
+  XLSX.writeFile(wb, `Data_Siswa_${todayLocal()}.xlsx`);
   showToast('✅ Data diekspor');
 }
 
@@ -4593,8 +4634,14 @@ function handleImportSiswaExcel(e) {
       for (let r = 1; r < rows.length; r++) {
         const row = rows[r];
         if (!row[iNama]) continue;
-        let katRaw = iKat >= 0 ? String(row[iKat]||'').trim().toUpperCase() : '';
-        if (!VALID_KATEGORI.includes(katRaw)) katRaw = 'ALQURAN_LANJUT';
+        // Terima kode (ALQURAN_PEMULA) maupun label hasil Export ("Al-Qur'an Pemula")
+        const katCell = iKat >= 0 ? String(row[iKat]||'').trim() : '';
+        let katRaw = katCell.toUpperCase().replace(/\s+/g, '_');
+        if (!VALID_KATEGORI.includes(katRaw)) {
+          const norm = t => t.toLowerCase().replace(/[^a-z]/g, '');
+          const byLabel = KATEGORI_LIST.find(k => norm(k.label) === norm(katCell));
+          katRaw = byLabel ? byLabel.value : 'ALQURAN_LANJUT';
+        }
         toInsert.push({
           nama: String(row[iNama]).trim(),
           nisn: iNisn >= 0 ? String(row[iNisn]||'').trim() : '',
@@ -5239,7 +5286,7 @@ async function exportAssignmentPDF() {
     }
 
     // Simpan
-    const filename = `Daftar_Assignment_${new Date().toISOString().slice(0,10)}.pdf`;
+    const filename = `Daftar_Assignment_${todayLocal()}.pdf`;
     doc.save(filename);
 
     hideLoading();
@@ -6000,9 +6047,10 @@ async function submitGantiPenguji(assignmentId) {
   showLoading('Mengganti penguji...');
   try {
     // Hapus penilaian lama (jika ada) karena penguji berbeda
-    await sb.from('penilaian').delete()
+    const { error: eDel } = await sb.from('penilaian').delete()
       .eq('siswa_id', a.siswa_id)
       .eq('penguji_id', a.penguji_id);
+    if (eDel) throw eDel;
 
     // Update assignment ke penguji baru, reset status ke 'belum'
     const { error } = await sb.from('assignment')
@@ -6030,9 +6078,10 @@ function deleteAssignment(id) {
         // Hapus penilaian terkait dulu
         const asg = (window._assignmentCache || []).find(a => a.id === id);
         if (asg) {
-          await sb.from('penilaian').delete()
+          const { error: eDel } = await sb.from('penilaian').delete()
             .eq('siswa_id', asg.siswa_id)
             .eq('penguji_id', asg.penguji_id);
+          if (eDel) throw eDel;
         }
         const { error } = await sb.from('assignment').delete().eq('id', id);
         if (error) throw error;
@@ -6286,6 +6335,45 @@ function resetAllPenilaian() {
         hideLoading();
         showToast('❌ ' + e.message);
       }
+    },
+    '🗑️', 'Hapus Semua', 'btn-danger'
+  );
+}
+
+// Kosongkan data siswa (untuk pergantian tahun ajaran). Akun penguji, surah,
+// dan pengaturan lembaga TIDAK dihapus. Arsip kelas ikut direset karena nama
+// kelas (mis. "9A") akan dipakai lagi oleh siswa yang baru.
+function resetAllSiswa() {
+  showConfirm(
+    'Hapus Semua Siswa',
+    'SEMUA siswa beserta assignment dan nilainya akan dihapus permanen, dan arsip kelas dikosongkan. Akun penguji tetap ada. Pastikan Rekap Nilai dan Data Siswa sudah di-export. Lanjutkan?',
+    () => {
+      // Konfirmasi kedua — tindakan ini tidak bisa dibatalkan
+      if (prompt('Ketik HAPUS untuk melanjutkan:') !== 'HAPUS') {
+        showToast('⚠️ Dibatalkan');
+        return;
+      }
+      (async () => {
+        showLoading('Menghapus...');
+        try {
+          for (const tabel of ['penilaian', 'assignment', 'siswa']) {
+            const { error } = await sb.from(tabel).delete().not('id', 'is', null);
+            if (error) throw error;
+          }
+          const { error: eArsip } = await sb.from('pengaturan')
+            .update({ kelas_arsip: '[]' }).eq('id', 1);
+          if (eArsip) throw eArsip;
+          STATE.kelasArsip = [];
+          STATE.cache.siswa = [];
+          STATE.cache.assignment = [];
+          window._siswaCache = [];
+          hideLoading();
+          showToast('🗑️ Semua data siswa dihapus. Silakan import siswa baru.', 4000);
+        } catch (e) {
+          hideLoading();
+          showToast('❌ ' + e.message);
+        }
+      })();
     },
     '🗑️', 'Hapus Semua', 'btn-danger'
   );

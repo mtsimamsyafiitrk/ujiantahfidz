@@ -200,25 +200,28 @@ tahfidz-app/
 ├── sw.js                            ← service worker PWA
 ├── icon-192.png                     ← ikon 192×192
 ├── icon-512.png                     ← ikon 512×512
-├── supabase-schema.sql              ← database schema (jalankan sekali di Supabase)
-├── migrasi-kuantitas.sql            ← upgrade DB lama: tambah sistem kuantitas
-├── migrasi-unique-assignment.sql    ← upgrade DB lama: 1 siswa = 1 assignment
+├── supabase-schema.sql              ← database schema (hanya untuk proyek Supabase BARU)
 └── README.md                        ← panduan ini
 ```
 
-**Untuk deploy**, upload **semua** file ini ke GitHub Pages:
+**Untuk deploy**, upload ke GitHub Pages:
 - `index.html` (wajib)
 - `manifest.json`, `sw.js`, `icon-192.png`, `icon-512.png` (wajib untuk PWA)
-- File SQL (`*.sql`) tidak perlu di-upload ke GitHub, hanya dijalankan sekali di Supabase SQL Editor
+- `supabase-schema.sql` tidak dipakai oleh aplikasi; cukup dijalankan sekali di Supabase SQL Editor saat membuat proyek baru
 
-### ⚠️ Kalau Database Sudah Pernah Di-setup Sebelumnya
+---
 
-Jika Anda sudah pernah jalankan `supabase-schema.sql` versi lama, jalankan file migrasi berikut **sekali** di Supabase SQL Editor (urutan tidak penting, tapi jalankan keduanya):
+## 🔄 Persiapan Tahun Ajaran / Periode Ujian Baru
 
-1. **`migrasi-kuantitas.sql`** — menambah kolom `nilai_kualitas`, `jumlah_juz`, `nilai_kuantitas`
-2. **`migrasi-unique-assignment.sql`** — memastikan 1 siswa hanya bisa punya 1 assignment
+Lakukan paling lambat beberapa hari sebelum ujian:
 
-Kedua file migrasi ini aman dijalankan tanpa menghapus data yang sudah ada.
+1. **Cek proyek Supabase** di https://supabase.com/dashboard. Proyek gratis otomatis di-*pause* kalau lama tidak dipakai — klik **Restore** bila statusnya *Paused*. Kalau sudah tidak bisa di-restore, buat proyek baru, jalankan `supabase-schema.sql`, lalu ganti `DEFAULT_URL` & `DEFAULT_KEY` di `index.html`.
+2. **Arsipkan hasil lama**: menu **Rekap → Export Excel** dan **Siswa → Export**.
+3. **Siapkan daftar siswa baru** di Excel (boleh mengedit file hasil Export Siswa: naikkan kelas, hapus lulusan, tambah siswa baru, perbarui semester & tahun ajaran).
+4. **Pengaturan → Sistem → Hapus Semua Siswa, Assignment & Penilaian**, lalu **Siswa → Import Excel**.
+5. **Pengaturan → Lembaga**: perbarui Tahun Ajaran.
+6. **Penguji**: periksa akun penguji (tambah/hapus/reset password), lalu buat **Assignment** baru.
+7. Coba login sebagai salah satu penguji dan simpan satu nilai percobaan, kemudian hapus lagi.
 
 ## 📱 Install ke HP (PWA)
 
