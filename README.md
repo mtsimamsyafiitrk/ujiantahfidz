@@ -128,6 +128,13 @@ Menu bawah: **Santri · Rekap**.
 5. **Santri Iqra'**: isi 3 nilai membaca (Lancar, Tajwid, Adab). Bila santri punya hafalan yang layak dinilai, nyalakan **Munculkan nilai hafalan** lalu nilai surahnya seperti santri Al-Qur'an.
 6. **Simpan penilaian**. Nilai bisa dibuka dan diubah lagi dari tab *Selesai*.
 
+### Transfer santri antar penguji
+
+1. Penguji A membuka **Transfer santri ke penguji lain** di atas daftar santrinya, memilih penguji tujuan dan satu atau beberapa santri, lalu mengirim permintaan (boleh dengan catatan).
+2. Penguji B melihat kartu permintaan di atas daftar santrinya (berisi siapa yang meminta, santri mana, dan catatannya) dengan tombol **Setuju** dan **Tolak**. Aplikasi memeriksa permintaan baru tiap 30 detik selama halaman itu terbuka.
+3. Bila disetujui, santri pindah ke daftar penguji B **beserta nilai yang sudah diisi**. Bila ditolak, santri tetap di penguji A. Penguji A bisa membatalkan permintaan selama belum dijawab.
+4. Admin tidak perlu menyetujui. Riwayat semua transfer ada di bagian bawah halaman **Penugasan**.
+
 ---
 
 ## 📏 Sistem Penilaian

@@ -1070,6 +1070,7 @@
   .v-section-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 44px; font-size: 15px; font-weight: 800; }
   .v-link { border: none; background: transparent; font-family: inherit; font-size: 13px; font-weight: 700; color: var(--primary); cursor: pointer; display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 4px; }
   .v-link-danger { color: var(--danger); display: flex; }
+  .v-link { text-align: left; }
   .v-status-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
   .v-status { min-height: 76px; border-radius: 14px; border: 1px solid var(--border); background: #fff; color: #334155; font-family: inherit; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; }
   .v-status b { font-size: 17px; font-weight: 800; }
@@ -1129,6 +1130,19 @@
   .v-stats b { font-size: 18px; font-weight: 800; line-height: 1.2; }
   .v-stats span { font-size: 12px; font-weight: 600; color: var(--text-muted); }
   .v-nilai { width: 44px; height: 44px; border-radius: 10px; color: #fff; font-size: 16px; font-weight: 800; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+
+
+  /* ── Transfer santri antar penguji ── */
+  .v-transfer { background: #FFF7ED; border: 1px solid #FDBA74; border-radius: 14px; padding: 14px; margin-bottom: 12px; color: #7C2D12; }
+  .v-transfer-head { display: flex; gap: 10px; align-items: flex-start; }
+  .v-transfer-head > div { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+  .v-transfer-head b { font-size: 15px; font-weight: 800; line-height: 1.35; }
+  .v-transfer-head span { font-size: 12px; }
+  .v-transfer ul { list-style: none; margin: 10px 0 0; padding: 0; font-size: 14px; font-weight: 700; }
+  .v-transfer li { padding: 3px 0; }
+  .v-transfer li span { font-weight: 500; }
+  .v-transfer-cat { font-size: 13px; margin-top: 8px; font-style: italic; }
+  .v-transfer-aksi { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 12px; }
 
   /* ── Penugasan (admin): dikelompokkan per penguji ── */
   .v-group { border: 1px solid var(--line); border-radius: 14px; background: #fff; margin-bottom: 8px; overflow: hidden; }
@@ -1874,6 +1888,10 @@ async function enterApp() {
     return;
   }
 
+  // Fitur transfer antar penguji butuh tabel sendiri; kalau belum ada, fitur ini saja yang disembunyikan
+  const cekT = await sb.from('transfer_santri').select('id').limit(1);
+  STATE.fiturTransfer = !(cekT.error && ['42P01', 'PGRST205'].includes(cekT.error.code));
+
   renderBottomNav();
   showPage('home');
 }
@@ -1988,6 +2006,105 @@ BEGIN
   RETURN json_build_object('diarsipkan', n_arsip, 'lulus', n_lulus, 'naik_kelas', n_naik);
 END $fn$;
 GRANT EXECUTE ON FUNCTION tutup_periode(TEXT, BOOLEAN, TEXT, TEXT) TO anon, authenticated;
+
+
+-- Transfer santri antar penguji (permintaan → persetujuan penguji tujuan)
+-- Aman dijalankan berulang kali.
+CREATE TABLE IF NOT EXISTS transfer_santri (
+  id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  dari_penguji_id UUID NOT NULL REFERENCES penguji(id) ON DELETE CASCADE,
+  ke_penguji_id   UUID NOT NULL REFERENCES penguji(id) ON DELETE CASCADE,
+  siswa           JSONB NOT NULL DEFAULT '[]',
+  catatan         TEXT,
+  status          TEXT NOT NULL DEFAULT 'menunggu'
+                  CHECK (status IN ('menunggu','disetujui','ditolak','dibatalkan')),
+  jumlah_pindah   INT,
+  dibuat_pada     TIMESTAMPTZ NOT NULL DEFAULT now(),
+  dijawab_pada    TIMESTAMPTZ
+);
+CREATE INDEX IF NOT EXISTS transfer_santri_status_idx ON transfer_santri (status);
+ALTER TABLE transfer_santri DISABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS transfer_santri_semua ON transfer_santri;
+CREATE POLICY transfer_santri_semua ON transfer_santri FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
+GRANT ALL ON transfer_santri TO anon, authenticated;
+
+-- Setujui transfer: pindahkan penugasan DAN nilai yang sudah masuk ke penguji tujuan.
+-- Satu transaksi; santri yang penugasannya sudah bukan milik pengirim dilewati.
+CREATE OR REPLACE FUNCTION terima_transfer(p_id UUID)
+RETURNS JSON LANGUAGE plpgsql AS $fn$
+DECLARE
+  t transfer_santri%ROWTYPE;
+  v_sid UUID; n_pindah INT := 0; n_baris INT := 0;
+BEGIN
+  SELECT * INTO t FROM transfer_santri WHERE id = p_id FOR UPDATE;
+  IF NOT FOUND THEN RAISE EXCEPTION 'Permintaan transfer tidak ditemukan'; END IF;
+  IF t.status <> 'menunggu' THEN RAISE EXCEPTION 'Permintaan ini sudah %', t.status; END IF;
+
+  FOR v_sid IN SELECT (e->>'id')::UUID FROM jsonb_array_elements(t.siswa) e LOOP
+    UPDATE assignment SET penguji_id = t.ke_penguji_id
+      WHERE siswa_id = v_sid AND penguji_id = t.dari_penguji_id;
+    GET DIAGNOSTICS n_baris = ROW_COUNT;
+    IF n_baris > 0 THEN
+      n_pindah := n_pindah + 1;
+      UPDATE penilaian SET penguji_id = t.ke_penguji_id
+        WHERE siswa_id = v_sid AND penguji_id = t.dari_penguji_id;
+    END IF;
+  END LOOP;
+
+  UPDATE transfer_santri SET status = 'disetujui', jumlah_pindah = n_pindah, dijawab_pada = now() WHERE id = p_id;
+  RETURN json_build_object('pindah', n_pindah, 'diminta', jsonb_array_length(t.siswa));
+END $fn$;
+GRANT EXECUTE ON FUNCTION terima_transfer(UUID) TO anon, authenticated;
+
+NOTIFY pgrst, 'reload schema';`;
+
+const SQL_TRANSFER = `-- Transfer santri antar penguji (permintaan → persetujuan penguji tujuan)
+-- Aman dijalankan berulang kali.
+CREATE TABLE IF NOT EXISTS transfer_santri (
+  id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  dari_penguji_id UUID NOT NULL REFERENCES penguji(id) ON DELETE CASCADE,
+  ke_penguji_id   UUID NOT NULL REFERENCES penguji(id) ON DELETE CASCADE,
+  siswa           JSONB NOT NULL DEFAULT '[]',
+  catatan         TEXT,
+  status          TEXT NOT NULL DEFAULT 'menunggu'
+                  CHECK (status IN ('menunggu','disetujui','ditolak','dibatalkan')),
+  jumlah_pindah   INT,
+  dibuat_pada     TIMESTAMPTZ NOT NULL DEFAULT now(),
+  dijawab_pada    TIMESTAMPTZ
+);
+CREATE INDEX IF NOT EXISTS transfer_santri_status_idx ON transfer_santri (status);
+ALTER TABLE transfer_santri DISABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS transfer_santri_semua ON transfer_santri;
+CREATE POLICY transfer_santri_semua ON transfer_santri FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);
+GRANT ALL ON transfer_santri TO anon, authenticated;
+
+-- Setujui transfer: pindahkan penugasan DAN nilai yang sudah masuk ke penguji tujuan.
+-- Satu transaksi; santri yang penugasannya sudah bukan milik pengirim dilewati.
+CREATE OR REPLACE FUNCTION terima_transfer(p_id UUID)
+RETURNS JSON LANGUAGE plpgsql AS $fn$
+DECLARE
+  t transfer_santri%ROWTYPE;
+  v_sid UUID; n_pindah INT := 0; n_baris INT := 0;
+BEGIN
+  SELECT * INTO t FROM transfer_santri WHERE id = p_id FOR UPDATE;
+  IF NOT FOUND THEN RAISE EXCEPTION 'Permintaan transfer tidak ditemukan'; END IF;
+  IF t.status <> 'menunggu' THEN RAISE EXCEPTION 'Permintaan ini sudah %', t.status; END IF;
+
+  FOR v_sid IN SELECT (e->>'id')::UUID FROM jsonb_array_elements(t.siswa) e LOOP
+    UPDATE assignment SET penguji_id = t.ke_penguji_id
+      WHERE siswa_id = v_sid AND penguji_id = t.dari_penguji_id;
+    GET DIAGNOSTICS n_baris = ROW_COUNT;
+    IF n_baris > 0 THEN
+      n_pindah := n_pindah + 1;
+      UPDATE penilaian SET penguji_id = t.ke_penguji_id
+        WHERE siswa_id = v_sid AND penguji_id = t.dari_penguji_id;
+    END IF;
+  END LOOP;
+
+  UPDATE transfer_santri SET status = 'disetujui', jumlah_pindah = n_pindah, dijawab_pada = now() WHERE id = p_id;
+  RETURN json_build_object('pindah', n_pindah, 'diminta', jsonb_array_length(t.siswa));
+END $fn$;
+GRANT EXECUTE ON FUNCTION terima_transfer(UUID) TO anon, authenticated;
 
 NOTIFY pgrst, 'reload schema';`;
 
@@ -2146,6 +2263,7 @@ function showPage(page) {
   if (STATE.perluMigrasi) return renderHalamanMigrasi();
 
   STATE.page = page;
+  clearInterval(window._timerTransfer);
   document.body.classList.remove('mode-form');
   renderBottomNav();
   window.scrollTo(0, 0);
@@ -3079,6 +3197,7 @@ async function renderDaftarSantri() {
   const c = document.getElementById('main-content');
   c.innerHTML = `
     <div id="dsProgress"></div>
+    <div id="dsTransfer"></div>
     <label class="v-search">
       <span class="material-symbols-outlined" aria-hidden="true">search</span>
       <input type="text" id="dsCari" placeholder="Cari nama santri" aria-label="Cari nama santri"
@@ -3093,6 +3212,15 @@ async function renderDaftarSantri() {
       .filter(a => a.siswa && !STATE.kelasArsip.includes(a.siswa.kelas))
       .sort((a, b) => (a.siswa.kelas || '').localeCompare(b.siswa.kelas || '') || (a.siswa.nama || '').localeCompare(b.siswa.nama || ''));
     renderDaftarSantriList();
+    if (STATE.fiturTransfer) {
+      TRANSFER.jumlahMasuk = null;
+      await muatTransferPenguji();
+      // Periksa permintaan baru tiap 30 detik selama halaman ini terbuka
+      clearInterval(window._timerTransfer);
+      window._timerTransfer = setInterval(() => {
+        if (STATE.page === 'home' && document.getElementById('dsTransfer')) muatTransferPenguji();
+      }, 30000);
+    }
   } catch (e) {
     document.getElementById('dsList').innerHTML =
       `<div class="alert alert-danger"><span>Gagal memuat daftar santri: ${escapeHtml(e.message)}</span></div>`;
@@ -3135,7 +3263,7 @@ function renderDaftarSantriList() {
         <span class="v-kelas">${escapeHtml(a.siswa.kelas || '-')}</span>
         <span class="v-row-info">
           <span class="v-row-nama">${escapeHtml(a.siswa.nama || '-')}</span>
-          <span class="v-row-ket">${escapeHtml(ketSantri(a.siswa))}</span>
+          <span class="v-row-ket">${escapeHtml(ketSantri(a.siswa))}${TRANSFER.idKeluar.has(a.siswa_id) ? ' · menunggu transfer' : ''}</span>
         </span>
         <span class="material-symbols-outlined" aria-hidden="true">chevron_right</span>
       </button>`).join('');
@@ -5051,7 +5179,9 @@ async function renderAdminAssignment() {
       <div id="assignmentList">
         ${renderAssignmentGroupsHtml(assignments, false)}
       </div>
+      <div id="infoTransferAdmin" style="margin-top:14px"></div>
     `;
+    renderInfoTransferAdmin();
     window._assignmentCache = assignments;
     window._siswaForAssignCache = siswa;
     window._pengujiForAssignCache = pengujiNonAdmin;
@@ -6693,6 +6823,10 @@ function submitTutupPeriode() {
         if (error) throw error;
         STATE.lembaga = { ...STATE.lembaga, tahun_ajaran: ta, semester: smt, kelas_arsip: '[]' };
         STATE.kelasArsip = [];
+        // Permintaan transfer yang masih menunggu tidak berlaku lagi di periode baru
+        if (STATE.fiturTransfer) {
+          await sb.from('transfer_santri').update({ status: 'dibatalkan', dijawab_pada: new Date().toISOString() }).eq('status', 'menunggu');
+        }
         hideLoading();
         const h = data || {};
         showToast(`✅ ${h.diarsipkan ?? 0} nilai diarsipkan. Lanjutkan dengan Naik kelas / lulus bila berganti tahun ajaran.`, 6000);
@@ -6874,6 +7008,300 @@ function terapkanNaikKelas() {
     },
     '🎓', 'Ya, terapkan', 'btn-primary'
   );
+}
+
+// ═════════════════════════════════════════════════════════════════
+// TRANSFER SANTRI ANTAR PENGUJI
+// Penguji A mengirim permintaan untuk 1+ santri ke penguji B. Bila B setuju,
+// penugasan dan nilai yang sudah masuk pindah ke B (fungsi SQL terima_transfer).
+// Admin tidak perlu menyetujui; admin melihat riwayatnya di halaman Penugasan.
+// ═════════════════════════════════════════════════════════════════
+const TRANSFER = { masuk: [], keluar: [], idKeluar: new Set(), penguji: {}, jumlahMasuk: null };
+const LABEL_TRANSFER = { menunggu: 'Menunggu', disetujui: 'Disetujui', ditolak: 'Ditolak', dibatalkan: 'Dibatalkan' };
+
+async function muatNamaPenguji() {
+  const { data, error } = await sb.from('penguji').select('id, nama, role').order('nama');
+  if (error) throw error;
+  TRANSFER.penguji = {};
+  (data || []).forEach(p => { TRANSFER.penguji[p.id] = p; });
+  return data || [];
+}
+const namaPenguji = id => TRANSFER.penguji[id]?.nama || 'Penguji';
+const daftarSantriTransfer = t => (Array.isArray(t.siswa) ? t.siswa : []);
+function waktuSingkat(iso) {
+  const d = new Date(iso);
+  return d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' }) + ', ' + d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+}
+
+async function muatTransferPenguji() {
+  const box = document.getElementById('dsTransfer');
+  if (!box || !STATE.fiturTransfer) return;
+  try {
+    const me = STATE.user.id;
+    if (!Object.keys(TRANSFER.penguji).length) await muatNamaPenguji();
+    const { data, error } = await sb.from('transfer_santri').select('*')
+      .eq('status', 'menunggu').or(`ke_penguji_id.eq.${me},dari_penguji_id.eq.${me}`)
+      .order('dibuat_pada');
+    if (error) throw error;
+    TRANSFER.masuk = (data || []).filter(t => t.ke_penguji_id === me);
+    TRANSFER.keluar = (data || []).filter(t => t.dari_penguji_id === me);
+    const idLama = [...TRANSFER.idKeluar].sort().join();
+    TRANSFER.idKeluar = new Set(TRANSFER.keluar.flatMap(t => daftarSantriTransfer(t).map(x => x.id)));
+    // Pemberitahuan saat ada permintaan baru masuk ketika halaman sedang terbuka
+    if (TRANSFER.jumlahMasuk !== null && TRANSFER.masuk.length > TRANSFER.jumlahMasuk) {
+      showToast(`🔔 Ada permintaan transfer santri dari ${namaPenguji(TRANSFER.masuk[TRANSFER.masuk.length - 1].dari_penguji_id)}`, 6000);
+    }
+    TRANSFER.jumlahMasuk = TRANSFER.masuk.length;
+    renderKotakTransfer();
+    if (idLama !== [...TRANSFER.idKeluar].sort().join()) renderDaftarSantriList();
+  } catch (e) { /* diam: daftar santri tetap bisa dipakai */ }
+}
+
+function renderKotakTransfer() {
+  const box = document.getElementById('dsTransfer');
+  if (!box) return;
+  const kartuMasuk = TRANSFER.masuk.map(t => {
+    const ss = daftarSantriTransfer(t);
+    return `
+      <div class="v-transfer" role="group" aria-label="Permintaan transfer dari ${escapeHtml(namaPenguji(t.dari_penguji_id))}">
+        <div class="v-transfer-head">
+          <span class="material-symbols-outlined" aria-hidden="true">notifications_active</span>
+          <div>
+            <b>${escapeHtml(namaPenguji(t.dari_penguji_id))} meminta Anda menguji ${ss.length} santri</b>
+            <span>${waktuSingkat(t.dibuat_pada)}</span>
+          </div>
+        </div>
+        <ul>${ss.map(x => `<li>${escapeHtml(x.nama)} <span>· ${escapeHtml(x.kelas || '-')}${x.selesai ? ' · sudah dinilai' : ''}</span></li>`).join('')}</ul>
+        ${t.catatan ? `<p class="v-transfer-cat">"${escapeHtml(t.catatan)}"</p>` : ''}
+        <div class="v-transfer-aksi">
+          <button class="btn btn-outline" onclick="jawabTransfer('${t.id}', false)">Tolak</button>
+          <button class="btn btn-primary" onclick="jawabTransfer('${t.id}', true)">Setuju</button>
+        </div>
+      </div>`;
+  }).join('');
+  const jmlKeluar = TRANSFER.keluar.reduce((a, t) => a + daftarSantriTransfer(t).length, 0);
+  box.innerHTML = `
+    ${kartuMasuk}
+    <button class="v-link" style="margin:-4px 0 6px" onclick="bukaFormTransfer()">
+      <span class="material-symbols-outlined" style="font-size:18px">swap_horiz</span>
+      Transfer santri ke penguji lain${jmlKeluar ? ` · ${jmlKeluar} menunggu persetujuan` : ''}
+    </button>`;
+}
+
+function jawabTransfer(id, setuju) {
+  const t = TRANSFER.masuk.find(x => x.id === id);
+  if (!t) return;
+  const n = daftarSantriTransfer(t).length;
+  const dari = namaPenguji(t.dari_penguji_id);
+  showConfirm(
+    setuju ? 'Setujui transfer?' : 'Tolak transfer?',
+    setuju
+      ? `${n} santri dari ${dari} akan masuk ke daftar Anda. Nilai yang sudah diisi ikut pindah.`
+      : `${n} santri tetap menjadi tanggungan ${dari}.`,
+    async () => {
+      showLoading('Menyimpan...');
+      try {
+        if (setuju) {
+          const { data, error } = await sb.rpc('terima_transfer', { p_id: id });
+          if (error) throw error;
+          hideLoading();
+          const pindah = data?.pindah ?? n;
+          showToast(pindah === n ? `✅ ${pindah} santri masuk ke daftar Anda`
+            : `✅ ${pindah} dari ${n} santri dipindahkan (sisanya sudah tidak ditugaskan ke ${dari})`, 5000);
+        } else {
+          const { error } = await sb.from('transfer_santri')
+            .update({ status: 'ditolak', dijawab_pada: new Date().toISOString() }).eq('id', id).eq('status', 'menunggu');
+          if (error) throw error;
+          hideLoading();
+          showToast('Permintaan ditolak');
+        }
+        showPage('home');
+      } catch (e) {
+        hideLoading();
+        showToast('❌ ' + pesanError(e), 6000);
+        muatTransferPenguji();
+      }
+    },
+    setuju ? '🤝' : '✋', setuju ? 'Ya, setuju' : 'Ya, tolak', setuju ? 'btn-primary' : 'btn-danger'
+  );
+}
+
+// ── Form permintaan transfer ──
+let FORM_TRANSFER = null; // { penguji: [], pilih: Set, ke, catatan }
+
+async function bukaFormTransfer() {
+  showLoading('Memuat...');
+  try {
+    const semua = await muatNamaPenguji();
+    FORM_TRANSFER = { penguji: semua.filter(p => p.id !== STATE.user.id), pilih: new Set(), ke: '', catatan: '' };
+    hideLoading();
+    renderFormTransfer();
+  } catch (e) {
+    hideLoading();
+    showToast('❌ ' + pesanError(e));
+  }
+}
+
+function renderFormTransfer() {
+  const f = FORM_TRANSFER;
+  const santri = DAFTAR.data.filter(a => !TRANSFER.idKeluar.has(a.siswa_id));
+  document.body.classList.add('mode-form');
+  document.getElementById('main-content').innerHTML = `
+    <div class="v-formhead">
+      <button class="v-back" aria-label="Kembali" onclick="showPage('home')">
+        <span class="material-symbols-outlined">arrow_back</span>
+      </button>
+      <div class="v-formhead-info">
+        <div class="v-title">Transfer santri</div>
+        <div class="v-sub">Santri pindah setelah penguji tujuan setuju</div>
+      </div>
+    </div>
+
+    ${TRANSFER.keluar.length ? `
+      <div class="card" style="padding:14px">
+        <div style="font-size:15px;font-weight:800;margin-bottom:8px">Menunggu persetujuan</div>
+        ${TRANSFER.keluar.map(t => `
+          <div class="flex-row flex-between" style="gap:8px;padding:8px 0;border-top:1px solid var(--line)">
+            <div style="min-width:0;font-size:14px">
+              <strong>${daftarSantriTransfer(t).length} santri</strong> → ${escapeHtml(namaPenguji(t.ke_penguji_id))}
+              <div class="text-small text-muted">${escapeHtml(daftarSantriTransfer(t).map(x => x.nama).join(', '))}</div>
+            </div>
+            <button class="v-link v-link-danger" onclick="batalkanTransfer('${t.id}')">Batalkan</button>
+          </div>`).join('')}
+      </div>` : ''}
+
+    <div class="v-field" style="margin-bottom:14px">
+      <label for="tfKe">Penguji tujuan</label>
+      <select id="tfKe" onchange="FORM_TRANSFER.ke = this.value">
+        <option value="">Pilih penguji</option>
+        ${f.penguji.map(p => `<option value="${p.id}" ${f.ke === p.id ? 'selected' : ''}>${escapeHtml(p.nama)}</option>`).join('')}
+      </select>
+    </div>
+
+    <div class="card" style="padding:14px">
+      <div class="flex-row flex-between" style="margin-bottom:6px">
+        <div style="font-size:15px;font-weight:800">Santri yang ditransfer</div>
+        <span class="text-small text-muted" id="tfJumlah"></span>
+      </div>
+      ${santri.length ? santri.map(a => `
+        <label style="display:flex;align-items:center;gap:10px;min-height:48px;margin:0;font-size:14px;color:var(--text);border-top:1px solid var(--line)">
+          <input type="checkbox" ${f.pilih.has(a.siswa_id) ? 'checked' : ''} onchange="pilihSantriTransfer('${a.siswa_id}', this.checked)" style="width:18px;height:18px;flex-shrink:0">
+          <span style="flex:1;min-width:0">${escapeHtml(a.siswa.nama)} <span class="text-muted">· ${escapeHtml(a.siswa.kelas || '-')}</span></span>
+          <span class="text-small text-muted">${a.status === 'selesai' ? 'Sudah dinilai' : 'Belum'}</span>
+        </label>`).join('') : '<div class="v-empty">Tidak ada santri yang bisa ditransfer.</div>'}
+    </div>
+
+    <textarea id="tfCatatan" placeholder="Alasan / catatan untuk penguji tujuan (opsional)" style="min-height:70px"
+              oninput="FORM_TRANSFER.catatan = this.value">${escapeHtml(f.catatan)}</textarea>
+
+    <div class="v-footer"><div class="v-footer-inner">
+      <button class="btn btn-primary btn-full" onclick="kirimTransfer()">Kirim permintaan</button>
+    </div></div>
+  `;
+  pilihSantriTransfer();
+}
+
+function pilihSantriTransfer(id, cek) {
+  if (id) { if (cek) FORM_TRANSFER.pilih.add(id); else FORM_TRANSFER.pilih.delete(id); }
+  const el = document.getElementById('tfJumlah');
+  if (el) el.textContent = `${FORM_TRANSFER.pilih.size} dipilih`;
+}
+
+async function kirimTransfer() {
+  const f = FORM_TRANSFER;
+  if (!f.ke) return showToast('⚠️ Pilih penguji tujuan');
+  if (!f.pilih.size) return showToast('⚠️ Pilih minimal 1 santri');
+  const siswa = DAFTAR.data.filter(a => f.pilih.has(a.siswa_id))
+    .map(a => ({ id: a.siswa_id, nama: a.siswa.nama, kelas: a.siswa.kelas, selesai: a.status === 'selesai' }));
+  showLoading('Mengirim...');
+  try {
+    const { error } = await sb.from('transfer_santri').insert({
+      dari_penguji_id: STATE.user.id, ke_penguji_id: f.ke, siswa, catatan: f.catatan.trim() || null
+    });
+    if (error) throw error;
+    hideLoading();
+    showToast(`✅ Permintaan dikirim ke ${namaPenguji(f.ke)}`, 4000);
+    showPage('home');
+  } catch (e) {
+    hideLoading();
+    showToast('❌ ' + pesanError(e), 6000);
+  }
+}
+
+async function batalkanTransfer(id) {
+  showLoading('Membatalkan...');
+  const { error } = await sb.from('transfer_santri')
+    .update({ status: 'dibatalkan', dijawab_pada: new Date().toISOString() }).eq('id', id).eq('status', 'menunggu');
+  hideLoading();
+  if (error) return showToast('❌ ' + pesanError(error));
+  TRANSFER.keluar = TRANSFER.keluar.filter(t => t.id !== id);
+  TRANSFER.idKeluar = new Set(TRANSFER.keluar.flatMap(t => daftarSantriTransfer(t).map(x => x.id)));
+  showToast('Permintaan dibatalkan');
+  renderFormTransfer();
+}
+
+// ── Admin: cukup mengetahui. Riwayat transfer di halaman Penugasan ──
+async function renderInfoTransferAdmin() {
+  const box = document.getElementById('infoTransferAdmin');
+  if (!box) return;
+  if (!STATE.fiturTransfer) {
+    box.innerHTML = `
+      <div class="alert alert-info" style="align-items:center">
+        <div style="flex:1">
+          <div style="font-weight:800">Transfer santri antar penguji belum aktif</div>
+          <div class="text-small">Fitur ini butuh satu pembaruan database.</div>
+        </div>
+        <button class="v-link" onclick="tampilkanSqlTransfer()">Lihat SQL</button>
+      </div>`;
+    return;
+  }
+  try {
+    await muatNamaPenguji();
+    const { data, error } = await sb.from('transfer_santri').select('*').order('dibuat_pada', { ascending: false }).limit(50);
+    if (error) throw error;
+    const menunggu = (data || []).filter(t => t.status === 'menunggu').length;
+    const warna = { menunggu: 'badge-orange', disetujui: 'badge-green', ditolak: 'badge-admin', dibatalkan: 'badge-admin' };
+    box.innerHTML = `
+      <details class="v-group" ${menunggu ? 'open' : ''}>
+        <summary>
+          <div class="v-group-row"><b>Transfer antar penguji</b><span>${menunggu ? menunggu + ' menunggu' : (data || []).length + ' riwayat'}</span></div>
+        </summary>
+        <div class="v-group-body" style="padding:10px 14px">
+          ${(data || []).length ? data.map(t => {
+            const ss = daftarSantriTransfer(t);
+            return `
+              <div style="padding:10px 0;border-bottom:1px solid var(--line);font-size:14px">
+                <div class="flex-row flex-between" style="gap:8px">
+                  <strong>${escapeHtml(namaPenguji(t.dari_penguji_id))} → ${escapeHtml(namaPenguji(t.ke_penguji_id))}</strong>
+                  <span class="badge ${warna[t.status] || ''}">${LABEL_TRANSFER[t.status] || t.status}</span>
+                </div>
+                <div class="text-small text-muted">${waktuSingkat(t.dibuat_pada)} · ${ss.length} santri${t.status === 'disetujui' && t.jumlah_pindah != null && t.jumlah_pindah !== ss.length ? ` (${t.jumlah_pindah} dipindahkan)` : ''}</div>
+                <div class="text-small">${escapeHtml(ss.map(x => `${x.nama} (${x.kelas || '-'})`).join(', '))}</div>
+                ${t.catatan ? `<div class="text-small text-muted">"${escapeHtml(t.catatan)}"</div>` : ''}
+              </div>`;
+          }).join('') : '<div class="v-empty" style="padding:14px">Belum ada transfer.</div>'}
+        </div>
+      </details>`;
+  } catch (e) {
+    box.innerHTML = `<div class="alert alert-danger"><span>Gagal memuat riwayat transfer: ${escapeHtml(pesanError(e))}</span></div>`;
+  }
+}
+
+function tampilkanSqlTransfer() {
+  showModal(`
+    <div class="modal-header">
+      <h3>Aktifkan transfer santri</h3>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <p style="font-size:14px;line-height:1.55;margin-bottom:10px">
+      Jalankan SQL ini sekali di <strong>Supabase → SQL Editor</strong>, lalu muat ulang aplikasi. Data yang ada tidak berubah.
+    </p>
+    <pre style="background:#F1F5F9;padding:12px;border-radius:10px;font-size:11px;overflow:auto;max-height:260px;line-height:1.6;color:#0f172a">${escapeHtml(SQL_TRANSFER)}</pre>
+    <div style="display:flex;gap:8px;margin-top:12px">
+      <button class="btn btn-outline" style="flex:1" onclick="navigator.clipboard.writeText(SQL_TRANSFER).then(() => showToast('✅ SQL disalin'))">Salin SQL</button>
+      <button class="btn btn-primary" style="flex:1" onclick="location.reload()">Muat ulang</button>
+    </div>
+  `);
 }
 
 // ═════════════════════════════════════════════════════════════════
