@@ -1,12 +1,16 @@
 // Service Worker untuk Tahfidz App
 // Versi cache — ubah ini kalau index.html di-update supaya user dapat versi baru
-const CACHE_VERSION = 'tahfidz-v1';
+const CACHE_VERSION = 'tahfidz-v2';
 const CORE_ASSETS = [
   './',
   './index.html',
   './manifest.json',
   './icon-192.png',
-  './icon-512.png'
+  './icon-512.png',
+  './logo-ponpes.webp',
+  './logo-mts.webp',
+  './logo-ponpes-ikon.webp',
+  './logo-mts-ikon.webp'
 ];
 
 // Install: cache core assets
