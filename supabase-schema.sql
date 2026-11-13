@@ -232,4 +232,117 @@ insert into surah (nomor, nama, jumlah_ayat) values
   (114, 'An-Nas', 6)
 on conflict (nomor) do nothing;
 
+-- ───────────────────────────────────────────────────────────────────
+-- Arsip nilai per periode, naik kelas & lulus (sama dengan SQL migrasi di aplikasi)
+-- ───────────────────────────────────────────────────────────────────
+-- Migrasi: status santri, nilai membaca Iqra', arsip nilai per periode, naik kelas & lulus
+-- Aman dijalankan berulang kali. Data yang sudah ada tidak berubah.
+ALTER TABLE siswa
+  ADD COLUMN IF NOT EXISTS status_dikunci BOOLEAN NOT NULL DEFAULT FALSE,
+  ADD COLUMN IF NOT EXISTS jumlah_hafalan NUMERIC,
+  ADD COLUMN IF NOT EXISTS lulus BOOLEAN NOT NULL DEFAULT FALSE,
+  ADD COLUMN IF NOT EXISTS tahun_lulus TEXT;
+
+ALTER TABLE penilaian
+  ADD COLUMN IF NOT EXISTS baca_lancar NUMERIC,
+  ADD COLUMN IF NOT EXISTS baca_tajwid NUMERIC,
+  ADD COLUMN IF NOT EXISTS baca_adab NUMERIC,
+  ADD COLUMN IF NOT EXISTS hafalan_aktif BOOLEAN NOT NULL DEFAULT FALSE;
+
+ALTER TABLE pengaturan
+  ADD COLUMN IF NOT EXISTS semester TEXT DEFAULT 'Ganjil';
+
+-- Salinan nilai per periode ujian. Tidak terhubung ke tabel siswa/penilaian,
+-- jadi tetap utuh walau santri naik kelas, lulus, atau dihapus.
+CREATE TABLE IF NOT EXISTS arsip_nilai (
+  id              UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  periode         TEXT NOT NULL,
+  tahun_ajaran    TEXT,
+  semester        TEXT,
+  diarsipkan_pada TIMESTAMPTZ NOT NULL DEFAULT now(),
+  siswa_id        UUID,
+  nisn            TEXT,
+  nama            TEXT,
+  kelas           TEXT,
+  kategori        TEXT,
+  jumlah_hafalan  NUMERIC,
+  penguji_id      UUID,
+  penguji_nama    TEXT,
+  tanggal_ujian   DATE,
+  catatan         TEXT,
+  nilai_kualitas  NUMERIC,
+  jumlah_juz      NUMERIC,
+  nilai_kuantitas NUMERIC,
+  nilai_akhir     NUMERIC,
+  baca_lancar     NUMERIC,
+  baca_tajwid     NUMERIC,
+  baca_adab       NUMERIC,
+  hafalan_aktif   BOOLEAN NOT NULL DEFAULT FALSE,
+  detail          JSONB NOT NULL DEFAULT '[]'
+);
+CREATE INDEX IF NOT EXISTS arsip_nilai_periode_idx ON arsip_nilai (periode);
+ALTER TABLE arsip_nilai DISABLE ROW LEVEL SECURITY;
+GRANT ALL ON arsip_nilai TO anon, authenticated;
+
+-- Tutup periode: arsipkan semua nilai, kosongkan nilai & penugasan,
+-- (opsional) naikkan kelas 7→8, 8→9 dan luluskan kelas 9, lalu set periode baru.
+-- Seluruhnya satu transaksi: kalau satu langkah gagal, tidak ada yang berubah.
+CREATE OR REPLACE FUNCTION tutup_periode(p_nama TEXT, p_naik_kelas BOOLEAN, p_ta_baru TEXT, p_semester_baru TEXT)
+RETURNS JSON LANGUAGE plpgsql AS $fn$
+DECLARE
+  v_ta TEXT; v_smt TEXT;
+  n_arsip INT := 0; n_lulus INT := 0; n_naik INT := 0; n_tmp INT := 0;
+BEGIN
+  IF COALESCE(TRIM(p_nama), '') = '' THEN RAISE EXCEPTION 'Nama periode wajib diisi'; END IF;
+  IF COALESCE(TRIM(p_ta_baru), '') = '' THEN RAISE EXCEPTION 'Tahun ajaran baru wajib diisi'; END IF;
+  IF EXISTS (SELECT 1 FROM arsip_nilai WHERE periode = TRIM(p_nama)) THEN
+    RAISE EXCEPTION 'Periode "%" sudah ada di arsip. Pakai nama lain.', TRIM(p_nama);
+  END IF;
+  SELECT tahun_ajaran, semester INTO v_ta, v_smt FROM pengaturan WHERE id = 1;
+
+  INSERT INTO arsip_nilai (periode, tahun_ajaran, semester, siswa_id, nisn, nama, kelas, kategori, jumlah_hafalan,
+      penguji_id, penguji_nama, tanggal_ujian, catatan, nilai_kualitas, jumlah_juz, nilai_kuantitas, nilai_akhir,
+      baca_lancar, baca_tajwid, baca_adab, hafalan_aktif, detail)
+  SELECT TRIM(p_nama), v_ta, v_smt, s.id, s.nisn, s.nama, s.kelas, s.kategori, s.jumlah_hafalan,
+      g.id, g.nama, p.tanggal_ujian, p.catatan, p.nilai_kualitas, p.jumlah_juz, p.nilai_kuantitas, p.nilai_akhir,
+      p.baca_lancar, p.baca_tajwid, p.baca_adab, p.hafalan_aktif,
+      COALESCE((SELECT jsonb_agg(jsonb_build_object(
+                  'surah_nama', d.surah_nama, 'kelancaran', d.kelancaran, 'tajwid', d.tajwid,
+                  'kekuatan_hafalan', d.kekuatan_hafalan, 'adab_tartil', d.adab_tartil,
+                  'total', d.total, 'urutan', d.urutan) ORDER BY d.urutan)
+                FROM nilai_detail d WHERE d.penilaian_id = p.id), '[]'::jsonb)
+  FROM penilaian p
+  JOIN siswa s ON s.id = p.siswa_id
+  LEFT JOIN penguji g ON g.id = p.penguji_id;
+  GET DIAGNOSTICS n_arsip = ROW_COUNT;
+
+  DELETE FROM nilai_detail WHERE id IS NOT NULL;
+  DELETE FROM penilaian WHERE id IS NOT NULL;
+  DELETE FROM assignment WHERE id IS NOT NULL;
+
+  IF p_naik_kelas THEN
+    -- Urutan penting: luluskan kelas 9 dulu, baru 8→9, lalu 7→8
+    UPDATE siswa SET lulus = TRUE, tahun_lulus = v_ta
+      WHERE NOT lulus AND substring(kelas FROM '[789]') = '9';
+    GET DIAGNOSTICS n_lulus = ROW_COUNT;
+    UPDATE siswa SET kelas = regexp_replace(kelas, '8', '9')
+      WHERE NOT lulus AND substring(kelas FROM '[789]') = '8';
+    GET DIAGNOSTICS n_naik = ROW_COUNT;
+    UPDATE siswa SET kelas = regexp_replace(kelas, '7', '8')
+      WHERE NOT lulus AND substring(kelas FROM '[789]') = '7';
+    GET DIAGNOSTICS n_tmp = ROW_COUNT;
+    n_naik := n_naik + n_tmp;
+  END IF;
+
+  -- Periode baru: penguji menentukan dan mengunci status lagi
+  UPDATE siswa SET status_dikunci = FALSE WHERE status_dikunci;
+  UPDATE siswa SET tahun_ajaran = TRIM(p_ta_baru), semester = p_semester_baru WHERE NOT lulus;
+  UPDATE pengaturan SET tahun_ajaran = TRIM(p_ta_baru), semester = p_semester_baru, kelas_arsip = '[]' WHERE id = 1;
+
+  RETURN json_build_object('diarsipkan', n_arsip, 'lulus', n_lulus, 'naik_kelas', n_naik);
+END $fn$;
+GRANT EXECUTE ON FUNCTION tutup_periode(TEXT, BOOLEAN, TEXT, TEXT) TO anon, authenticated;
+
+NOTIFY pgrst, 'reload schema';
+
 select 'Database berhasil di-setup. Login: admin / admin123' as hasil;

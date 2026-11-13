@@ -188,18 +188,25 @@ tahfidz-app/
 
 ---
 
-## 🔄 Persiapan Tahun Ajaran / Periode Ujian Baru
+## 🔄 Pergantian Periode Ujian / Tahun Ajaran
 
-Lakukan paling lambat beberapa hari sebelum ujian:
+Nilai lama **tidak dihapus**: disalin ke arsip dan tetap bisa dilihat serta di-export dari menu Rekap.
 
-0. **Bila aplikasi menampilkan "Database perlu diperbarui"**: login sebagai admin, salin SQL yang ditampilkan, jalankan di Supabase → SQL Editor, lalu tekan *Periksa lagi*. Cukup sekali.
-1. **Cek proyek Supabase** di https://supabase.com/dashboard. Proyek gratis otomatis di-*pause* kalau lama tidak dipakai — klik **Restore** bila statusnya *Paused*. Kalau sudah tidak bisa di-restore, buat proyek baru, jalankan `supabase-schema.sql`, lalu ganti `DEFAULT_URL` & `DEFAULT_KEY` di `index.html`.
-2. **Arsipkan hasil lama**: menu **Rekap → Export Excel** dan **Siswa → Export**.
-3. **Siapkan daftar siswa baru** di Excel (boleh mengedit file hasil Export Siswa: naikkan kelas, hapus lulusan, tambah siswa baru, perbarui semester & tahun ajaran).
-4. **Pengaturan → Sistem → Hapus Semua Siswa, Assignment & Penilaian**, lalu **Santri → Import Excel**.
-5. **Pengaturan → Lembaga**: perbarui Tahun Ajaran dan Semester (lakukan sebelum import, karena santri baru mengikuti isian ini).
-6. **Pengaturan → Akun penguji**: periksa akun (tambah/hapus/reset password), lalu buat **Penugasan** baru.
-7. Coba login sebagai salah satu penguji dan simpan satu nilai percobaan, kemudian hapus lagi.
+1. **Cek proyek Supabase** di https://supabase.com/dashboard. Proyek gratis otomatis di-*pause* kalau lama tidak dipakai; klik **Restore** bila statusnya *Paused*.
+2. Bila aplikasi menampilkan **"Database perlu diperbarui"**: login sebagai admin, salin SQL yang ditampilkan, jalankan di Supabase → SQL Editor, lalu tekan *Periksa lagi*.
+3. **Pengaturan → Tahun ajaran → Arsipkan nilai & mulai periode baru**:
+   - beri nama arsip untuk nilai yang sekarang (mis. `2025/2026 Genap`),
+   - isi tahun ajaran dan semester baru,
+   - centang **Naikkan kelas** bila berganti tahun ajaran: kelas 7 → 8, kelas 8 → 9, kelas 9 menjadi *lulus*.
+
+   Semua nilai disalin ke arsip, lalu nilai dan penugasan dikosongkan. Prosesnya satu kesatuan: kalau gagal di tengah, tidak ada yang berubah.
+4. **Santri → Import Excel** dengan daftar santri terbaru. Santri yang NISN-nya sudah ada **diperbarui** (nama, kelas) dan tidak digandakan; yang belum ada ditambahkan. Aplikasi menampilkan santri aktif yang tidak ada di file; bila mereka sudah pindah, buka datanya dan centang *Tidak aktif lagi*.
+5. **Pengaturan → Akun penguji**: periksa akun, lalu buat **Penugasan** baru.
+6. Coba login sebagai salah satu penguji dan simpan satu nilai percobaan, kemudian hapus lagi.
+
+**Melihat nilai lama:** menu **Rekap** → pilih periode di baris paling atas. Nilai arsip hanya bisa dibaca dan di-export, tidak bisa diubah.
+
+**Santri lulus / tidak aktif** tetap tersimpan dan bisa dilihat di menu Santri → tab *Lulus / tidak aktif*.
 
 ## 📱 Install ke HP (PWA)
 
