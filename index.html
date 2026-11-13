@@ -984,7 +984,16 @@
   }
   .main-content > *, .list-item, .stat-card, .card, .badge, .alert, .header-logo { animation: none !important; }
   .app-header { background: #fff; backdrop-filter: none; -webkit-backdrop-filter: none; box-shadow: none; border-bottom: 1px solid var(--line); padding: 10px 16px; }
-  .header-logo { display: none; }
+  .header-logos { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+  .header-logos img { height: 36px; width: auto; display: block; }
+  @media (max-width: 360px) { .header-logos img:last-child { display: none; } }
+  .header-text p { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  @media (max-width: 480px) { #userChipName { display: none; } .user-chip { width: 40px; padding: 0; justify-content: center; } }
+  .login-logos { display: flex; align-items: center; justify-content: center; gap: 18px; margin-bottom: 16px; }
+  .login-logos img { height: 104px; width: auto; display: block; }
+  .login-title { font-family: inherit; font-style: normal; font-weight: 800; color: var(--text); }
+  .login-sub { color: var(--text-muted); }
+  .login-card { box-shadow: none; border: 1px solid var(--line); }
   .header-text h1 { font-family: inherit; font-style: normal; font-weight: 800; color: var(--text); font-size: 15px; }
   .header-text p { font-size: 12px; color: var(--text-muted); }
   .user-chip { background: #fff; color: var(--text); border: 1px solid var(--line); box-shadow: none; min-height: 40px; font-size: 13px; padding: 0 12px; max-width: 40vw; overflow: hidden; white-space: nowrap; }
@@ -1026,7 +1035,6 @@
   .modal-header h3, .confirm-box h3 { font-family: inherit; font-weight: 800; }
   .confirm-box p { color: var(--text-muted); }
   .text-muted { color: var(--text-muted); }
-  .login-logo { display: none; }
 
   /* Mode form (Keterangan & Isi nilai): menu bawah diganti bilah Simpan */
   body.mode-form .bottom-nav { display: none; }
@@ -1124,7 +1132,10 @@
 <!-- LOGIN PAGE -->
 <div class="login-wrap" id="loginPage" style="display:none">
   <div class="login-card">
-    <div class="login-logo">📖</div>
+    <div class="login-logos">
+      <img src="logo-ponpes.webp" alt="Logo Ponpes Al Imam Asy-Syafi'i Tarakan" width="360" height="360">
+      <img src="logo-mts.webp" alt="Logo Madrasah Tsanawiyah Al Imam Asy-Syafi'i Kota Tarakan" width="360" height="383">
+    </div>
     <h1 class="login-title">Tahfidzul Qur'an</h1>
     <p class="login-sub">MTs Al Imam Asy-Syafi'i · Tarakan</p>
 
@@ -1155,12 +1166,15 @@
 <div id="app" style="display:none">
   <header class="app-header">
     <div class="header-top">
-      <div class="header-logo"><span class="material-symbols-outlined" style="font-size:22px;color:white">menu_book</span></div>
+      <div class="header-logos">
+        <img src="logo-ponpes-ikon.webp" alt="" width="128" height="128">
+        <img src="logo-mts-ikon.webp" alt="" width="128" height="103">
+      </div>
       <div class="header-text">
         <h1 id="header-title">Al Imam Asy-Syafi'i</h1>
-        <p id="header-sub">Penilaian Tahfidz · Tarakan</p>
+        <p id="header-sub">Penilaian Tahfidz</p>
       </div>
-      <button class="user-chip" id="userChip" onclick="showPage('pengaturan')">
+      <button class="user-chip" id="userChip" onclick="showPage('pengaturan')" aria-label="Profil dan pengaturan" title="Profil dan pengaturan">
         <span class="material-symbols-outlined" style="font-size:14px">person</span>
         <span id="userChipName">User</span>
       </button>
@@ -1826,8 +1840,7 @@ async function enterApp() {
       STATE.lembaga = data;
       STATE.kelasArsip = JSON.parse(data.kelas_arsip || '[]');
       document.getElementById('header-title').textContent = data.nama_lembaga;
-      document.getElementById('header-sub').textContent =
-        'Penilaian Tahfidz · ' + (data.alamat || '');
+      document.getElementById('header-sub').textContent = 'Penilaian Tahfidz';
     }
   } catch (e) {}
 
@@ -6115,7 +6128,7 @@ async function saveLembaga() {
     if (error) throw error;
     STATE.lembaga = { ...STATE.lembaga, nama_lembaga: nama, alamat, tahun_ajaran: ta, semester };
     document.getElementById('header-title').textContent = nama;
-    document.getElementById('header-sub').textContent = 'Penilaian Tahfidz · ' + alamat;
+    document.getElementById('header-sub').textContent = 'Penilaian Tahfidz';
     hideLoading();
     showToast('✅ Data lembaga tersimpan');
   } catch (e) {
