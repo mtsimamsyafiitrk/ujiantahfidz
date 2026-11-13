@@ -29,8 +29,11 @@ create table if not exists siswa (
   semester      text,
   jenis_kelamin text,
   tahun_ajaran  text,
+  -- status santri: 'ALQURAN_LANJUT' = Al-Qur'an, 'TAHAP_IQRA' = Iqra' ('ALQURAN_PEMULA' = nilai lama)
   kategori      text default 'ALQURAN_LANJUT'
                 check (kategori in ('ALQURAN_LANJUT','ALQURAN_PEMULA','TAHAP_IQRA')),
+  status_dikunci boolean not null default false,   -- dikunci penguji saat ujian
+  jumlah_hafalan numeric,                          -- jumlah hafalan selama ini (juz), keterangan saja
   created_at    timestamptz not null default now()
 );
 
@@ -53,6 +56,11 @@ create table if not exists penilaian (
   jumlah_juz      numeric,
   nilai_kuantitas numeric,
   nilai_akhir     numeric,
+  -- khusus santri Iqra': nilai membaca (bobot 76%) dan apakah nilai hafalan dimunculkan (bobot 24%)
+  baca_lancar     numeric,
+  baca_tajwid     numeric,
+  baca_adab       numeric,
+  hafalan_aktif   boolean not null default false,
   created_at      timestamptz not null default now(),
   updated_at      timestamptz not null default now(),
   unique (siswa_id, penguji_id)
@@ -87,6 +95,7 @@ create table if not exists pengaturan (
   nama_lembaga text not null default 'MTs Al Imam Asy-Syafi''i',
   alamat       text default 'Tarakan',
   tahun_ajaran text default '2026/2027',
+  semester     text default 'Ganjil',
   kelas_arsip  text not null default '[]'    -- JSON array nama kelas yang diarsipkan
 );
 

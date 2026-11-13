@@ -6,16 +6,14 @@ Aplikasi web single-file untuk penilaian ujian Tahfidzul Qur'an siswa MTs Al Ima
 
 ## ✨ Fitur
 
-- 🔐 **Login multi-user** — penguji & admin, password ter-hash (SHA-256)
-- 👥 **Manajemen siswa** — input manual + import dari Excel
-- 📋 **Penugasan** — admin tentukan siapa menguji siapa (per-siswa atau massal per kelas)
-- ✍️ **Form penilaian fleksibel** — penguji tambah baris surah sesuai kebutuhan
-- 📏 **Bobot otomatis** — Kelancaran 30%, Tajwid 30%, Kekuatan Hafalan 25%, Adab & Tartil 15%
-- 📊 **Rekap + Export Excel** — 2 sheet (ringkasan & detail per surah)
-- ✏️ **Edit & Hapus penilaian** yang sudah masuk
-- 📘 **Pengaturan daftar surah** — 114 surah pre-loaded, bisa diaktifkan/nonaktifkan
-- 🔴 **Live progress bar** — jumlah selesai/belum real-time
-- 📱 **Mobile-first & responsif** — ringan, cepat, bisa diakses dari HP
+- Login penguji & admin
+- Daftar santri per penguji dengan progres dan pencarian
+- Status santri (Iqra' / Al-Qur'an) ditentukan dan dikunci penguji; cara penilaian mengikuti status
+- Isi nilai lewat pencarian surah, dengan tombol salin nilai surah sebelumnya
+- Penugasan santri ke penguji: bagi otomatis, per kelas, satuan, atau import Excel
+- Rekap nilai + Export Excel (ringkasan & detail per surah)
+- Import/export data santri dari Excel
+- Bisa di-install ke HP (PWA)
 
 ---
 
@@ -109,85 +107,64 @@ Isi dengan kredensial Anda, simpan, lalu upload ke GitHub.
 
 ## 📝 Alur Penggunaan
 
-### Untuk Admin:
+### Admin
 
-1. **Login** pakai akun admin default
-2. **Ganti password** (Profil → Ganti Password)
-3. **Edit data lembaga** (Admin → Lembaga) — nama, alamat, tahun ajaran
-4. **Tambah penguji** (Admin → Penguji) — buat akun untuk masing-masing guru/asatidz
-5. **Input data siswa** (Admin → Siswa) — manual atau import Excel
-   - Download template Excel untuk format yang benar
-6. **Buat penugasan** (Admin → Assignment):
-   - **Satuan**: pilih siswa + penguji 1-per-1
-   - **Massal**: pilih kelas → semua siswa di kelas ditugaskan ke 1 penguji sekaligus
-7. **Aktifkan surah** yang diujikan (Admin → Surah) — opsional, default semua aktif
+Menu bawah: **Beranda · Santri · Penugasan · Rekap**. Pengaturan dibuka dari tombol nama di kanan atas.
 
-### Untuk Penguji:
+1. **Pengaturan → Lembaga**: nama, alamat, tahun ajaran, semester.
+2. **Pengaturan → Akun penguji**: buat akun untuk tiap penguji.
+3. **Santri**: tambah satu per satu atau **Import Excel** (kolom `nama`, `nisn`, `kelas`, `jenis_kelamin`; template ada di menu ⋯).
+4. **Penugasan**: tekan **Bagi otomatis** untuk membagi santri ke penguji. Pilihan lain (satu santri, satu kelas, import Excel, cetak PDF) ada di menu ⋯. Daftar dikelompokkan per penguji.
+5. **Rekap**: lihat nilai, buka rincian, **Export Excel**.
 
-1. **Login** pakai akun yang dibuat admin
-2. Di **Beranda** lihat jumlah siswa yang harus dinilai
-3. Buka menu **Nilai** → klik siswa yang mau diuji
-4. Isi tanggal ujian, catatan, dan **tambah baris surah** untuk tiap surah yang diuji
-5. Isi nilai per aspek (0–100), total per surah dihitung otomatis
-6. Simpan → status otomatis jadi "Selesai"
-7. **Edit** kapan saja kalau ada koreksi
+### Penguji
 
-### Rekap & Export:
+Menu bawah: **Santri · Rekap**.
 
-- **Semua role** bisa buka menu **Rekap** untuk lihat ringkasan nilai
-- Filter per kelas atau per penguji
-- Export ke Excel (2 sheet: Rekap + Detail Surah)
+1. Setelah login langsung tampil **daftar santri** yang ditugaskan, dengan tab *Belum dinilai* / *Selesai*.
+2. Ketuk santri → pilih **status**: **Iqra'** atau **Al-Qur'an**. Aplikasi meminta konfirmasi lalu **mengunci** status itu supaya tidak terganti tanpa sengaja. Penguji bisa membuka kuncinya sendiri bila keliru.
+3. Untuk santri Al-Qur'an, isi **jumlah hafalan selama ini** (keterangan saja, tidak mengubah nilai), lalu **Mulai menilai**.
+4. **Santri Al-Qur'an**: ketik nama/nomor surah di kolom pencarian → ketuk hasilnya → isi 4 nilai (Lancar, Tajwid, Hafalan, Adab). Tombol **Salin nilai surah sebelumnya** muncul di surah yang baru dipilih. Surah tersusun otomatis menurut urutan; pencarian tidak menampilkan surah yang sudah dipilih.
+5. **Santri Iqra'**: isi 3 nilai membaca (Lancar, Tajwid, Adab). Bila santri punya hafalan yang layak dinilai, nyalakan **Munculkan nilai hafalan** lalu nilai surahnya seperti santri Al-Qur'an.
+6. **Simpan penilaian**. Nilai bisa dibuka dan diubah lagi dari tab *Selesai*.
 
 ---
 
 ## 📏 Sistem Penilaian
 
-Nilai akhir siswa terdiri dari **2 komponen**:
-
-### 🔵 KUALITAS (Bobot 70%)
-
-Rata-rata nilai dari semua surah yang diujikan. Per surah dihitung dari 4 aspek:
-
-| Aspek | Bobot |
-|-------|-------|
-| Kelancaran | 30% |
-| Tajwid | 30% |
-| Kekuatan Hafalan | 25% |
-| Adab & Tartil | 15% |
-
-### 🟡 KUANTITAS (Bobot 30%)
-
-Dihitung dari jumlah juz yang dihafal siswa, dibandingkan dengan target minimal per kelas:
-
-| Kelas | Target Minimal |
-|-------|---------------|
-| Kelas 7 | 2 juz |
-| Kelas 8 | 4 juz |
-| Kelas 9 | 6 juz |
-
-**Rumus**: `Kuantitas = (Jumlah Juz ÷ Target Juz) × 100` (maksimal 100)
-
-- Kelas 7 hafal 2 juz → 100 ✓
-- Kelas 8 hafal 2 juz → 50
-- Kelas 9 hafal 8 juz → 100 (dibatasi maksimal)
-
-### 🏆 NILAI AKHIR
+### Santri Al-Qur'an
 
 ```
 Nilai Akhir = (Kualitas × 70%) + (Kuantitas × 30%)
 ```
 
-**Contoh**: Siswa kelas 8, nilai Kualitas 85, hafal 4 juz
-- Kuantitas = (4/4) × 100 = 100
-- Nilai Akhir = (85 × 0.70) + (100 × 0.30) = 59.5 + 30 = **89.5** (Jayyid Jiddan)
+- **Kualitas**: rata-rata nilai semua surah yang diuji. Nilai satu surah = Kelancaran 30% + Tajwid 30% + Kekuatan Hafalan 25% + Adab & Tartil 15%.
+- **Kuantitas**: `(juz tersetor ÷ target kelas) × 100`, maksimal 100. Sebuah surah dihitung tersetor bila nilainya ≥ 65. Juz dihitung dari jumlah ayat surah yang tersetor.
+
+| Kelas | Target |
+|-------|--------|
+| 7 | 2 juz |
+| 8 | 4 juz |
+| 9 | 6 juz |
+
+### Santri Iqra'
+
+Santri Iqra' tidak wajib menghafal, jadi nilai tertingginya 76.
+
+```
+Nilai Akhir = (Nilai Membaca × 76%) + (Nilai Hafalan × 24%)
+```
+
+- **Nilai Membaca**: rata-rata Lancar, Tajwid, Adab.
+- **Nilai Hafalan**: hanya dihitung bila penguji menyalakan *Munculkan nilai hafalan*. Hafalannya dinilai dengan sistem Al-Qur'an di atas (kualitas 70% + kuantitas 30%, target sesuai kelas). Bila tidak dinyalakan, bagian ini nol.
 
 ### Predikat
 
-- ≥ 90: Mumtaz (Cemerlang)
-- ≥ 80: Jayyid Jiddan (Baik Sekali)
-- ≥ 70: Jayyid (Baik)
-- ≥ 60: Maqbul (Cukup)
-- < 60: Rasib (Kurang)
+- ≥ 90: Mumtaz
+- ≥ 80: Jayyid Jiddan
+- ≥ 70: Jayyid
+- ≥ 60: Maqbul
+- < 60: Rasib
 
 ---
 
@@ -215,12 +192,13 @@ tahfidz-app/
 
 Lakukan paling lambat beberapa hari sebelum ujian:
 
+0. **Bila aplikasi menampilkan "Database perlu diperbarui"**: login sebagai admin, salin SQL yang ditampilkan, jalankan di Supabase → SQL Editor, lalu tekan *Periksa lagi*. Cukup sekali.
 1. **Cek proyek Supabase** di https://supabase.com/dashboard. Proyek gratis otomatis di-*pause* kalau lama tidak dipakai — klik **Restore** bila statusnya *Paused*. Kalau sudah tidak bisa di-restore, buat proyek baru, jalankan `supabase-schema.sql`, lalu ganti `DEFAULT_URL` & `DEFAULT_KEY` di `index.html`.
 2. **Arsipkan hasil lama**: menu **Rekap → Export Excel** dan **Siswa → Export**.
 3. **Siapkan daftar siswa baru** di Excel (boleh mengedit file hasil Export Siswa: naikkan kelas, hapus lulusan, tambah siswa baru, perbarui semester & tahun ajaran).
-4. **Pengaturan → Sistem → Hapus Semua Siswa, Assignment & Penilaian**, lalu **Siswa → Import Excel**.
-5. **Pengaturan → Lembaga**: perbarui Tahun Ajaran.
-6. **Penguji**: periksa akun penguji (tambah/hapus/reset password), lalu buat **Assignment** baru.
+4. **Pengaturan → Sistem → Hapus Semua Siswa, Assignment & Penilaian**, lalu **Santri → Import Excel**.
+5. **Pengaturan → Lembaga**: perbarui Tahun Ajaran dan Semester (lakukan sebelum import, karena santri baru mengikuti isian ini).
+6. **Pengaturan → Akun penguji**: periksa akun (tambah/hapus/reset password), lalu buat **Penugasan** baru.
 7. Coba login sebagai salah satu penguji dan simpan satu nilai percobaan, kemudian hapus lagi.
 
 ## 📱 Install ke HP (PWA)
