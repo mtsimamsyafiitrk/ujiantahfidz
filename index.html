@@ -1101,6 +1101,9 @@
   .v-grid4 input::-webkit-outer-spin-button, .v-grid4 input::-webkit-inner-spin-button,
   .v-grid3 input::-webkit-outer-spin-button, .v-grid3 input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
   .v-salin { min-height: 44px; border-radius: 10px; border: 1px solid #C7D2FE; background: var(--info-light); color: var(--primary-dark); font-family: inherit; font-size: 14px; font-weight: 700; cursor: pointer; }
+  .v-nav { display: flex; gap: 8px; }
+  .v-nav button { flex: 1; min-width: 0; min-height: 44px; padding: 0 10px; border-radius: 10px; border: 1px solid var(--border); background: #fff; color: var(--primary-dark); font-family: inherit; font-size: 14px; font-weight: 700; cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .v-nav button:last-child { text-align: right; }
   .v-switch-row { flex-direction: row; align-items: center; justify-content: space-between; padding: 12px 14px; }
   .v-switch { appearance: none; -webkit-appearance: none; width: 56px; height: 32px; border-radius: 999px; background: #94A3B8; position: relative; cursor: pointer; flex-shrink: 0; transition: background 0.15s; }
   .v-switch::after { content: ''; position: absolute; top: 3px; left: 3px; width: 26px; height: 26px; border-radius: 999px; background: #fff; transition: left 0.15s; }
@@ -3650,6 +3653,7 @@ function renderSurahCards() {
           </label>`).join('')}
       </div>
       <button class="v-salin" id="salin-${i}" style="display:none" onclick="event.stopPropagation(); salinSebelumnya(${i})"></button>
+      <div class="v-nav" id="nav-${i}" style="display:none"></div>
     </div>`).join('');
   fs.baris.forEach((_, i) => refreshKartu(i));
 }
@@ -3675,6 +3679,31 @@ function refreshKartu(i) {
   const bisa = i === FORM_STATE.aktif && barisKosong(b) && !!prev;
   salin.style.display = bisa ? '' : 'none';
   if (bisa) salin.textContent = `Salin nilai surah sebelumnya (${ASPEK.map(([f]) => prev[f]).join(' · ')})`;
+  // Tombol pindah ke surah sebelum/sesudahnya, hanya di kartu aktif
+  const nav = document.getElementById('nav-' + i);
+  const [sblm, ssdh] = [-1, 1].map(arah => tetanggaSurah(b.surah_nama, arah));
+  nav.style.display = i === FORM_STATE.aktif && (sblm || ssdh) ? '' : 'none';
+  nav.innerHTML = [[sblm, -1, '‹ '], [ssdh, 1, '']].map(([t, arah, pre]) => t
+    ? `<button onclick="event.stopPropagation(); lompatSurah(${i}, ${arah})">${pre}${t.nomor}. ${escapeHtml(t.nama)}${arah > 0 ? ' ›' : ''}</button>`
+    : '<span style="flex:1"></span>').join('');
+}
+
+// Surah aktif berikutnya (arah 1) / sebelumnya (arah -1) menurut nomor
+function tetanggaSurah(nama, arah) {
+  const list = STATE.cache.surah || [];
+  const k = list.findIndex(x => x.nama === nama);
+  return k < 0 ? null : list[k + arah] || null;
+}
+
+function lompatSurah(dari, arah) {
+  const t = tetanggaSurah(FORM_STATE.baris[dari].surah_nama, arah);
+  if (!t) return;
+  const i = FORM_STATE.baris.findIndex(b => b.surah_nama === t.nama);
+  if (i < 0) return pilihSurah(t.nomor);
+  aktifkanSurah(i);
+  const kartu = document.querySelector(`#surahCards .v-card[data-i="${i}"]`);
+  kartu.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  kartu.querySelector('input').focus();
 }
 
 function aktifkanSurah(i) {
