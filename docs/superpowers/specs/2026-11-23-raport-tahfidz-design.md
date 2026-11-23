@@ -16,7 +16,7 @@ Satu halaman A4 tegak per santri, diekspor sekaligus satu kelas menjadi satu fil
 
 ## Tata letak (contoh: https://claude.ai/artifact/J8Nx5tjjcKmgidy51wsBXM)
 1. **Kop**: logo Ponpes (kiri, `logo-ponpes.webp`) dan logo MTs utuh (kanan, `logo-mts.webp`), nama lembaga, lalu tiap baris kolom Alamat di Pengaturan, garis ganda.
-   Isi Alamat: `Jl. Swaran Jaya, RT. 015 Juata Permai, Kota Tarakan 77116` / `Email: mtsimamsyafiitrk@gmail.com · Akreditasi: C`.
+   Isi Alamat: `Jl. Swaran Jaya, RT. 015 Juata Permai, Kota Tarakan 77116` / `Email: mtsimamsyafiitrk@gmail.com · Akreditasi: C` / `NSM : 121265710005 | NPSN : 70033661`.
 2. **Judul**: LAPORAN HASIL UJIAN TAHFIDZUL QUR'AN, Semester … Tahun Ajaran ….
 3. **Identitas** (2 kolom): Nama, NISN, Status, Kelas, Tanggal Ujian, Target Kelas.
 4. **Tabel per juz**: Juz | Surah yang diujikan (surah pertama – terakhir, jumlah) | Kelancaran | Tajwid | Kekuatan Hafalan | Adab & Tartil | Nilai (rata-rata surah di juz itu). Baris akhir: rata-rata aspek dan Nilai Kualitas.
