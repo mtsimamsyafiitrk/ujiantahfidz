@@ -96,7 +96,9 @@ create table if not exists pengaturan (
   alamat       text default 'Tarakan',
   tahun_ajaran text default '2026/2027',
   semester     text default 'Ganjil',
-  kelas_arsip  text not null default '[]'    -- JSON array nama kelas yang diarsipkan
+  kelas_arsip  text not null default '[]',   -- JSON array nama kelas yang diarsipkan
+  kepala_madrasah text,                      -- penandatangan raport
+  ketua_tahfidz   text
 );
 
 -- Aplikasi melakukan autentikasi sendiri dengan anon key (lihat README → Catatan Teknis)
@@ -250,7 +252,9 @@ ALTER TABLE penilaian
   ADD COLUMN IF NOT EXISTS hafalan_aktif BOOLEAN NOT NULL DEFAULT FALSE;
 
 ALTER TABLE pengaturan
-  ADD COLUMN IF NOT EXISTS semester TEXT DEFAULT 'Ganjil';
+  ADD COLUMN IF NOT EXISTS semester TEXT DEFAULT 'Ganjil',
+  ADD COLUMN IF NOT EXISTS kepala_madrasah TEXT,
+  ADD COLUMN IF NOT EXISTS ketua_tahfidz TEXT;
 
 -- Salinan nilai per periode ujian. Tidak terhubung ke tabel siswa/penilaian,
 -- jadi tetap utuh walau santri naik kelas, lulus, atau dihapus.

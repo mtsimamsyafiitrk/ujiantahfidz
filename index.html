@@ -1770,6 +1770,217 @@ function predikat(n) {
   return 'Rasib';
 }
 
+// Data satu halaman raport dari satu baris penilaian (bentuk fetchAllPenilaianLengkap).
+// Nilai akhir/kualitas/juz/kuantitas memakai angka tersimpan, sama dengan yang tampil di Rekap.
+function susunRaport(p) {
+  const iqra = getKategori(p.siswa) === 'TAHAP_IQRA';
+  const rata = (arr, f) => arr.reduce((a, x) => a + f(x), 0) / arr.length;
+  const baris = (iqra && !p.hafalan_aktif) ? [] :
+    (p.nilai_detail || []).filter(barisLengkap).sort((a, b) => (a.urutan ?? 0) - (b.urutan ?? 0));
+  // Surah yang melintasi beberapa juz masuk ke juz awalnya; surah di luar data baku → juz "-"
+  const grup = new Map();
+  baris.forEach(b => {
+    const juz = SURAH_JUZ[b.surah_nama]?.[0]?.juz ?? '-';
+    if (!grup.has(juz)) grup.set(juz, []);
+    grup.get(juz).push(b);
+  });
+  const juzRows = [...grup].map(([juz, g]) => ({
+    juz,
+    surah: g.length > 1 ? `${g[0].surah_nama} – ${g[g.length - 1].surah_nama}` : g[0].surah_nama,
+    n: g.length,
+    kelancaran: rata(g, x => Number(x.kelancaran)), tajwid: rata(g, x => Number(x.tajwid)),
+    hafalan: rata(g, x => Number(x.kekuatan_hafalan)), adab: rata(g, x => Number(x.adab_tartil)),
+    nilai: rata(g, hitungTotal)
+  }));
+  const akhir = Number(p.nilai_akhir) || 0;
+  return {
+    iqra, juzRows, hafalanAktif: !!p.hafalan_aktif,
+    rata: baris.length ? { kelancaran: rata(baris, x => Number(x.kelancaran)), tajwid: rata(baris, x => Number(x.tajwid)),
+      hafalan: rata(baris, x => Number(x.kekuatan_hafalan)), adab: rata(baris, x => Number(x.adab_tartil)) } : null,
+    kualitas: Number(p.nilai_kualitas) || 0, juz: Number(p.jumlah_juz) || 0,
+    kuantitas: Number(p.nilai_kuantitas) || 0, target: getTargetJuz(p.siswa?.kelas),
+    membaca: iqra ? (Number(p.baca_lancar) + Number(p.baca_tajwid) + Number(p.baca_adab)) / 3 : null,
+    akhir, predikat: predikat(akhir)
+  };
+}
+
+// ── Raport PDF per kelas (A4 tegak, satu halaman per santri) ──
+const KOP_PONPES = "PONDOK PESANTREN AL IMAM ASY-SYAFI'I";
+const KOTA_RAPORT = 'Tarakan';
+
+// jsPDF tidak membaca webp → ubah lewat canvas ke PNG. Gagal (mis. offline) → tanpa logo.
+async function muatLogoPNG(src) {
+  try {
+    const img = new Image();
+    img.src = src;
+    await img.decode();
+    const c = document.createElement('canvas');
+    c.width = img.naturalWidth; c.height = img.naturalHeight;
+    c.getContext('2d').drawImage(img, 0, 0);
+    return { data: c.toDataURL('image/png'), rasio: img.naturalHeight / img.naturalWidth };
+  } catch (e) {
+    return null;
+  }
+}
+
+function fmtKoma(n) { return (Number(n) || 0).toFixed(1).replace('.', ','); }
+
+function gambarRaport(doc, p, logos, l) {
+  const r = susunRaport(p);
+  const s = p.siswa || {};
+  const W = 210, M = 18, cx = W / 2;
+  const tabel = { theme: 'grid', margin: { left: M, right: M },
+    styles: { font: 'times', fontSize: 9, cellPadding: 1.4, lineColor: [40, 40, 40], lineWidth: 0.2, textColor: [17, 17, 17] },
+    headStyles: { fillColor: [236, 242, 238], textColor: [17, 17, 17], fontStyle: 'bold', halign: 'center', valign: 'middle' } };
+  doc.setTextColor(17, 17, 17);
+
+  // Kop
+  const [lp, lm] = logos;
+  if (lp) doc.addImage(lp.data, 'PNG', M, 12, 22, 22 * lp.rasio);
+  if (lm) doc.addImage(lm.data, 'PNG', W - M - 22 / lm.rasio, 12, 22 / lm.rasio, 22);
+  doc.setFont('times', 'normal'); doc.setFontSize(10.5);
+  doc.text(KOP_PONPES, cx, 16, { align: 'center' });
+  doc.setFont('times', 'bold'); doc.setFontSize(14);
+  doc.text((l.nama_lembaga || "MTs Al Imam Asy-Syafi'i").toUpperCase(), cx, 22, { align: 'center' });
+  doc.setFont('times', 'normal'); doc.setFontSize(8.5);
+  let y = 26.5;
+  String(l.alamat || '').split('\n').map(x => x.trim()).filter(Boolean).slice(0, 3).forEach(baris => {
+    doc.text(baris, cx, y, { align: 'center' }); y += 3.8;
+  });
+  y = Math.max(y, 37);
+  doc.setLineWidth(0.8); doc.line(M, y, W - M, y);
+  doc.setLineWidth(0.25); doc.line(M, y + 1.1, W - M, y + 1.1);
+
+  // Judul
+  y += 7.5;
+  doc.setFont('times', 'bold'); doc.setFontSize(12.5);
+  doc.text("LAPORAN HASIL UJIAN TAHFIDZUL QUR'AN", cx, y, { align: 'center' });
+  doc.setFont('times', 'normal'); doc.setFontSize(10);
+  doc.text(`Semester ${l.semester || '-'} Tahun Ajaran ${l.tahun_ajaran || '-'}`, cx, y + 5, { align: 'center' });
+
+  // Identitas
+  y += 12;
+  const tgl = p.tanggal_ujian
+    ? new Date(p.tanggal_ujian + 'T00:00:00').toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })
+    : '';
+  const idn = [
+    ['Nama', s.nama || '-', 'Kelas', s.kelas || '-'],
+    ['NISN', s.nisn || '-', 'Tanggal Ujian', tgl || '-'],
+    ['Status', getKategoriInfo(s.kategori).label, 'Target Kelas', `${r.target} Juz`]
+  ];
+  doc.setFontSize(10);
+  idn.forEach(([a, b, c, d], i) => {
+    const yy = y + i * 5;
+    doc.setFont('times', 'normal');
+    doc.text(a, M, yy); doc.text(':', M + 22, yy); doc.text(c, 118, yy); doc.text(':', 143, yy); doc.text(d, 146, yy);
+    doc.setFont('times', i === 0 ? 'bold' : 'normal');
+    doc.text(doc.splitTextToSize(b, 72)[0], M + 25, yy);
+  });
+  y += 3 * 5 + 1;
+
+  // Tabel nilai
+  if (r.iqra) {
+    doc.autoTable({ ...tabel, startY: y,
+      head: [['Aspek Membaca', 'Nilai']],
+      body: [['Kelancaran', fmtKoma(p.baca_lancar)], ['Tajwid', fmtKoma(p.baca_tajwid)], ['Adab', fmtKoma(p.baca_adab)],
+             [{ content: 'Nilai Membaca (rata-rata)', styles: { fontStyle: 'bold', fillColor: [236, 242, 238] } },
+              { content: fmtKoma(r.membaca), styles: { fontStyle: 'bold', fillColor: [236, 242, 238] } }]],
+      columnStyles: { 1: { halign: 'center', cellWidth: 30 } } });
+    y = doc.lastAutoTable.finalY + 3;
+  }
+  if (r.juzRows.length) {
+    const tot = { fontStyle: 'bold', fillColor: [236, 242, 238], halign: 'center' };
+    doc.autoTable({ ...tabel, startY: y,
+      head: [['Juz', 'Surah yang diujikan', 'Kelancaran', 'Tajwid', 'Kekuatan Hafalan', 'Adab & Tartil', 'Nilai']],
+      body: r.juzRows.map(j => [j.juz, `${j.surah} (${j.n} surah)`, fmtKoma(j.kelancaran), fmtKoma(j.tajwid), fmtKoma(j.hafalan), fmtKoma(j.adab), fmtKoma(j.nilai)])
+        .concat([[{ content: 'Rata-rata aspek / Nilai Kualitas', colSpan: 2, styles: { ...tot, halign: 'left' } },
+          { content: fmtKoma(r.rata.kelancaran), styles: tot }, { content: fmtKoma(r.rata.tajwid), styles: tot },
+          { content: fmtKoma(r.rata.hafalan), styles: tot }, { content: fmtKoma(r.rata.adab), styles: tot },
+          { content: fmtKoma(r.kualitas), styles: tot }]]),
+      columnStyles: { 0: { halign: 'center', cellWidth: 11 }, 2: { halign: 'center', cellWidth: 19 }, 3: { halign: 'center', cellWidth: 16 },
+        4: { halign: 'center', cellWidth: 19 }, 5: { halign: 'center', cellWidth: 17 }, 6: { halign: 'center', cellWidth: 15 } } });
+    y = doc.lastAutoTable.finalY + 3;
+  }
+
+  // Rekapitulasi + predikat
+  const hafalan = hitungNilaiAkhir(r.kualitas, r.kuantitas);
+  const rek = r.iqra
+    ? [[`Nilai Membaca ${fmtKoma(r.membaca)} × ${BOBOT_BACA_IQRA * 100}%`, fmtKoma(r.membaca * BOBOT_BACA_IQRA)]]
+        .concat(r.hafalanAktif ? [[`Nilai Hafalan ${fmtKoma(hafalan)} × ${BOBOT_HAFALAN_IQRA * 100}%`, fmtKoma(hafalan * BOBOT_HAFALAN_IQRA)]] : [])
+    : [[`Nilai Kualitas ${fmtKoma(r.kualitas)} × ${BOBOT_KUALITAS * 100}%`, fmtKoma(r.kualitas * BOBOT_KUALITAS)],
+       [`Kuantitas ${fmtKoma(r.kuantitas)} (hafalan ${fmtKoma(r.juz)} dari ${r.target} juz) × ${BOBOT_KUANTITAS * 100}%`, fmtKoma(r.kuantitas * BOBOT_KUANTITAS)]];
+  const yRek = y + 1;
+  doc.autoTable({ ...tabel, startY: yRek, margin: { left: M, right: W - M - 112 },
+    head: [[{ content: 'Rekapitulasi', colSpan: 2, styles: { halign: 'left' } }]],
+    body: rek.concat([[{ content: 'Nilai Akhir', styles: { fontStyle: 'bold' } }, { content: fmtKoma(r.akhir), styles: { fontStyle: 'bold' } }]]),
+    columnStyles: { 1: { halign: 'center', cellWidth: 18 } } });
+  const bx = M + 116, bw = W - M - bx, bh = Math.max(doc.lastAutoTable.finalY - yRek, 26);
+  doc.setLineWidth(0.2); doc.rect(bx, yRek, bw, bh);
+  doc.setFont('times', 'bold'); doc.setFontSize(9); doc.text('Predikat', bx + 2, yRek + 4);
+  doc.setFontSize(18); doc.text(fmtKoma(r.akhir), bx + bw / 2, yRek + bh / 2 - 1, { align: 'center' });
+  doc.setFont('times', 'italic'); doc.setFontSize(10.5); doc.text(r.predikat, bx + bw / 2, yRek + bh / 2 + 4, { align: 'center' });
+  doc.setFont('times', 'normal'); doc.setFontSize(7);
+  // Font standar PDF tidak punya tanda ≥, jadi batas ditulis sebagai rentang
+  doc.text(['Mumtaz 90-100 · Jayyid Jiddan 80-89', 'Jayyid 70-79 · Maqbul 60-69 · Rasib <60'], bx + bw / 2, yRek + bh - 4.5, { align: 'center' });
+  y = Math.max(doc.lastAutoTable.finalY, yRek + bh) + 5;
+
+  // Catatan penguji (dipotong agar tidak menabrak tanda tangan)
+  const yTtd = 238;
+  const maks = Math.max(1, Math.floor((yTtd - 8 - y - 6) / 4.2));
+  let cat = doc.setFontSize(9.5).splitTextToSize(p.catatan?.trim() || '-', W - 2 * M - 4);
+  if (cat.length > maks) { cat = cat.slice(0, maks); cat[maks - 1] += ' …'; }
+  const ch = 6 + cat.length * 4.2;
+  doc.rect(M, y, W - 2 * M, ch);
+  doc.setFont('times', 'bold'); doc.text('Catatan Penguji', M + 2, y + 4.5);
+  doc.setFont('times', 'normal'); doc.text(cat, M + 2, y + 9);
+
+  // Tanda tangan: tempat & tanggal di atas kolom kanan, tiga jabatan sejajar
+  doc.setFontSize(10);
+  const kol = [M + 29, cx, W - M - 29];
+  doc.text(`${KOTA_RAPORT}, ${tgl || '...........................'}`, kol[2], yTtd, { align: 'center' });
+  const ttd = [['Penguji,', p.penguji?.nama], ['Ketua Tahfidz,', l.ketua_tahfidz], ['Kepala Madrasah,', l.kepala_madrasah]];
+  ttd.forEach(([jab, nama], i) => {
+    doc.setFont('times', 'normal'); doc.text(jab, kol[i], yTtd + 5, { align: 'center' });
+    const nm = nama?.trim() || '(...............................)';
+    doc.setFont('times', 'bold'); doc.text(nm, kol[i], yTtd + 30, { align: 'center' });
+    if (nama?.trim()) { const w = doc.getTextWidth(nm); doc.setLineWidth(0.2); doc.line(kol[i] - w / 2, yTtd + 30.8, kol[i] + w / 2, yTtd + 30.8); }
+  });
+}
+
+async function exportRaportPDF() {
+  if (typeof window.jspdf === 'undefined') return showToast('❌ Library PDF belum siap, coba lagi sebentar');
+  const kelas = REKAP.kelasRaport;
+  if (!kelas) return showToast('⚠️ Pilih satu kelas dulu');
+  // Semua nilai kelas ini, tanpa memandang filter penguji/status/pencarian
+  const daftar = REKAP.data.filter(p => p.siswa?.kelas === kelas)
+    .sort((a, b) => (a.siswa?.nama || '').localeCompare(b.siswa?.nama || ''));
+  if (!daftar.length) return showToast('⚠️ Belum ada nilai di kelas ini');
+
+  showLoading('Membuat raport...');
+  try {
+    const { data: siswaKelas, error } = await sb.from('siswa').select('id, nama').eq('kelas', kelas).eq('lulus', false);
+    if (error) throw error;
+    const sudah = new Set(daftar.map(p => p.siswa?.id));
+    const belum = (siswaKelas || []).filter(x => !sudah.has(x.id)).map(x => x.nama).sort((a, b) => a.localeCompare(b));
+
+    const logos = await Promise.all([muatLogoPNG('logo-ponpes.webp'), muatLogoPNG('logo-mts.webp')]);
+    const l = STATE.lembaga || {};
+    const doc = new window.jspdf.jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    daftar.forEach((p, i) => { if (i) doc.addPage(); gambarRaport(doc, p, logos, l); });
+    const aman = x => String(x || '').replace(/[\\/:*?"<>|\s]+/g, '-');
+    const nama = `Raport_Tahfidz_${aman(kelas)}_${aman(l.semester)}_${aman(l.tahun_ajaran)}.pdf`;
+    doc.save(nama);
+    hideLoading();
+    showToast(belum.length
+      ? `✅ ${daftar.length} raport tersimpan. Belum dinilai (${belum.length}): ${belum.slice(0, 5).join(', ')}${belum.length > 5 ? ', …' : ''}`
+      : `✅ ${daftar.length} raport tersimpan: ${nama}`, belum.length ? 8000 : 3500);
+  } catch (e) {
+    hideLoading();
+    console.error(e);
+    showToast('❌ Gagal membuat raport: ' + pesanError(e));
+  }
+}
+
 // ═════════════════════════════════════════════════════════════════
 // INIT APLIKASI
 // ═════════════════════════════════════════════════════════════════
@@ -1914,7 +2125,9 @@ ALTER TABLE penilaian
   ADD COLUMN IF NOT EXISTS hafalan_aktif BOOLEAN NOT NULL DEFAULT FALSE;
 
 ALTER TABLE pengaturan
-  ADD COLUMN IF NOT EXISTS semester TEXT DEFAULT 'Ganjil';
+  ADD COLUMN IF NOT EXISTS semester TEXT DEFAULT 'Ganjil',
+  ADD COLUMN IF NOT EXISTS kepala_madrasah TEXT,
+  ADD COLUMN IF NOT EXISTS ketua_tahfidz TEXT;
 
 -- Salinan nilai per periode ujian. Tidak terhubung ke tabel siswa/penilaian,
 -- jadi tetap utuh walau santri naik kelas, lulus, atau dihapus.
@@ -3947,9 +4160,14 @@ async function renderRekap() {
   c.innerHTML = `
     <div class="page-header v-pagehead">
       <h2>Rekap Nilai</h2>
-      <button class="btn btn-outline btn-sm" id="btnExportRekap" onclick="exportRekapExcel()" style="display:none">
-        <span class="material-symbols-outlined" style="font-size:17px">download</span> Export Excel
-      </button>
+      <div class="flex-row" style="gap:6px;flex-wrap:wrap">
+        <button class="btn btn-outline btn-sm" id="btnRaportPDF" onclick="exportRaportPDF()" style="display:none">
+          <span class="material-symbols-outlined" style="font-size:17px">picture_as_pdf</span> Export Raport PDF
+        </button>
+        <button class="btn btn-outline btn-sm" id="btnExportRekap" onclick="exportRekapExcel()" style="display:none">
+          <span class="material-symbols-outlined" style="font-size:17px">download</span> Export Excel
+        </button>
+      </div>
     </div>
     <div id="rekapFilter"></div>
     <div id="rekapBody"><div class="card"><div class="text-center" style="padding:30px"><div class="spinner"></div></div></div></div>
@@ -4047,6 +4265,8 @@ function renderRekapHasil() {
 
   if (!data.length) {
     if (btn) btn.style.display = 'none';
+    const btnRaport = document.getElementById('btnRaportPDF');
+    if (btnRaport) btnRaport.style.display = 'none';
     window._rekapFiltered = [];
     body.innerHTML = `<div class="v-empty">${dariArsip ? 'Tidak ada nilai di arsip ini.' : 'Belum ada penilaian yang tersimpan pada periode ini.'}</div>`;
     return;
@@ -4062,6 +4282,12 @@ function renderRekapHasil() {
   });
   window._rekapFiltered = filtered; // dipakai export & detail
   if (btn) btn.style.display = filtered.length ? '' : 'none';
+  // Raport hanya untuk satu kelas penuh pada periode berjalan
+  const btnRaport = document.getElementById('btnRaportPDF');
+  // Bila periode ini hanya berisi satu kelas, pilihan kelas tidak tampil → pakai kelas itu
+  const semuaKelas = [...new Set(data.map(p => p.siswa?.kelas).filter(Boolean))];
+  REKAP.kelasRaport = STATE.filter.kelas !== 'all' ? STATE.filter.kelas : (semuaKelas.length === 1 ? semuaKelas[0] : null);
+  if (btnRaport) btnRaport.style.display = (canSeeAll && !dariArsip && REKAP.kelasRaport) ? '' : 'none';
 
   const nilaiAkhir = filtered.map(p => Number(p.nilai_akhir) || 0);
   const rata = nilaiAkhir.length ? nilaiAkhir.reduce((a, b) => a + b, 0) / nilaiAkhir.length : 0;
@@ -4574,8 +4800,23 @@ async function renderAdminLembagaOnly() {
       </div>
       <div class="form-group">
         <label>Alamat</label>
-        <textarea id="lbAlamat">${escapeHtml(l.alamat || '')}</textarea>
+        <textarea id="lbAlamat" rows="3">${escapeHtml(l.alamat || '')}</textarea>
+        <p class="text-small text-muted">Setiap baris tampil sebagai satu baris di kop raport (alamat, email, NSM/NPSN).</p>
       </div>
+      ${'kepala_madrasah' in l ? `
+      <div class="form-group">
+        <label for="lbKepala">Kepala Madrasah</label>
+        <input type="text" id="lbKepala" value="${escapeHtml(l.kepala_madrasah || '')}" placeholder="Nama dan gelar">
+      </div>
+      <div class="form-group">
+        <label for="lbKetua">Ketua Tahfidz</label>
+        <input type="text" id="lbKetua" value="${escapeHtml(l.ketua_tahfidz || '')}" placeholder="Nama dan gelar">
+      </div>` : `
+      <div class="alert alert-warning" style="display:block">
+        Nama Kepala Madrasah dan Ketua Tahfidz untuk tanda tangan raport belum bisa diisi.
+        Jalankan SQL ini sekali di Supabase → SQL Editor, lalu muat ulang aplikasi:
+        <pre style="white-space:pre-wrap;font-size:12px;margin-top:6px">ALTER TABLE pengaturan ADD COLUMN IF NOT EXISTS kepala_madrasah TEXT, ADD COLUMN IF NOT EXISTS ketua_tahfidz TEXT;</pre>
+      </div>`}
       <div class="form-group">
         <label>Tahun Ajaran</label>
         <input type="text" id="lbTA" value="${escapeHtml(l.tahun_ajaran || '')}" placeholder="2026/2027">
@@ -6536,14 +6777,20 @@ async function saveLembaga() {
   const ta = document.getElementById('lbTA').value.trim();
   const semester = document.getElementById('lbSmt').value;
   if (!nama) return showToast('⚠️ Nama lembaga wajib');
+  const ubah = { nama_lembaga: nama, alamat, tahun_ajaran: ta, semester };
+  // Kolom penandatangan raport hanya ada setelah migrasi; tanpa itu form-nya tidak tampil
+  if (document.getElementById('lbKepala')) {
+    ubah.kepala_madrasah = document.getElementById('lbKepala').value.trim();
+    ubah.ketua_tahfidz = document.getElementById('lbKetua').value.trim();
+  }
 
   showLoading('Menyimpan...');
   try {
     const { error } = await sb.from('pengaturan')
-      .update({ nama_lembaga: nama, alamat, tahun_ajaran: ta, semester })
+      .update(ubah)
       .eq('id', 1);
     if (error) throw error;
-    STATE.lembaga = { ...STATE.lembaga, nama_lembaga: nama, alamat, tahun_ajaran: ta, semester };
+    STATE.lembaga = { ...STATE.lembaga, ...ubah };
     document.getElementById('header-title').textContent = nama;
     document.getElementById('header-sub').textContent = 'Penilaian Tahfidz';
     hideLoading();

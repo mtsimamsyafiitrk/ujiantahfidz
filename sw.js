@@ -1,6 +1,6 @@
 // Service Worker untuk Tahfidz App
 // Versi cache — ubah ini kalau index.html di-update supaya user dapat versi baru
-const CACHE_VERSION = 'tahfidz-v2';
+const CACHE_VERSION = 'tahfidz-v3';
 const CORE_ASSETS = [
   './',
   './index.html',
