@@ -1770,6 +1770,40 @@ function predikat(n) {
   return 'Rasib';
 }
 
+// Data satu halaman raport dari satu baris penilaian (bentuk fetchAllPenilaianLengkap).
+// Nilai akhir/kualitas/juz/kuantitas memakai angka tersimpan, sama dengan yang tampil di Rekap.
+function susunRaport(p) {
+  const iqra = getKategori(p.siswa) === 'TAHAP_IQRA';
+  const rata = (arr, f) => arr.reduce((a, x) => a + f(x), 0) / arr.length;
+  const baris = (iqra && !p.hafalan_aktif) ? [] :
+    (p.nilai_detail || []).filter(barisLengkap).sort((a, b) => (a.urutan ?? 0) - (b.urutan ?? 0));
+  // Surah yang melintasi beberapa juz masuk ke juz awalnya; surah di luar data baku → juz "-"
+  const grup = new Map();
+  baris.forEach(b => {
+    const juz = SURAH_JUZ[b.surah_nama]?.[0]?.juz ?? '-';
+    if (!grup.has(juz)) grup.set(juz, []);
+    grup.get(juz).push(b);
+  });
+  const juzRows = [...grup].map(([juz, g]) => ({
+    juz,
+    surah: g.length > 1 ? `${g[0].surah_nama} – ${g[g.length - 1].surah_nama}` : g[0].surah_nama,
+    n: g.length,
+    kelancaran: rata(g, x => Number(x.kelancaran)), tajwid: rata(g, x => Number(x.tajwid)),
+    hafalan: rata(g, x => Number(x.kekuatan_hafalan)), adab: rata(g, x => Number(x.adab_tartil)),
+    nilai: rata(g, hitungTotal)
+  }));
+  const akhir = Number(p.nilai_akhir) || 0;
+  return {
+    iqra, juzRows, hafalanAktif: !!p.hafalan_aktif,
+    rata: baris.length ? { kelancaran: rata(baris, x => Number(x.kelancaran)), tajwid: rata(baris, x => Number(x.tajwid)),
+      hafalan: rata(baris, x => Number(x.kekuatan_hafalan)), adab: rata(baris, x => Number(x.adab_tartil)) } : null,
+    kualitas: Number(p.nilai_kualitas) || 0, juz: Number(p.jumlah_juz) || 0,
+    kuantitas: Number(p.nilai_kuantitas) || 0, target: getTargetJuz(p.siswa?.kelas),
+    membaca: iqra ? (Number(p.baca_lancar) + Number(p.baca_tajwid) + Number(p.baca_adab)) / 3 : null,
+    akhir, predikat: predikat(akhir)
+  };
+}
+
 // ═════════════════════════════════════════════════════════════════
 // INIT APLIKASI
 // ═════════════════════════════════════════════════════════════════
