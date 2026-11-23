@@ -1948,7 +1948,9 @@ ALTER TABLE penilaian
   ADD COLUMN IF NOT EXISTS hafalan_aktif BOOLEAN NOT NULL DEFAULT FALSE;
 
 ALTER TABLE pengaturan
-  ADD COLUMN IF NOT EXISTS semester TEXT DEFAULT 'Ganjil';
+  ADD COLUMN IF NOT EXISTS semester TEXT DEFAULT 'Ganjil',
+  ADD COLUMN IF NOT EXISTS kepala_madrasah TEXT,
+  ADD COLUMN IF NOT EXISTS ketua_tahfidz TEXT;
 
 -- Salinan nilai per periode ujian. Tidak terhubung ke tabel siswa/penilaian,
 -- jadi tetap utuh walau santri naik kelas, lulus, atau dihapus.
@@ -4608,8 +4610,23 @@ async function renderAdminLembagaOnly() {
       </div>
       <div class="form-group">
         <label>Alamat</label>
-        <textarea id="lbAlamat">${escapeHtml(l.alamat || '')}</textarea>
+        <textarea id="lbAlamat" rows="3">${escapeHtml(l.alamat || '')}</textarea>
+        <p class="text-small text-muted">Setiap baris tampil sebagai satu baris di kop raport (alamat, email, NSM/NPSN).</p>
       </div>
+      ${'kepala_madrasah' in l ? `
+      <div class="form-group">
+        <label for="lbKepala">Kepala Madrasah</label>
+        <input type="text" id="lbKepala" value="${escapeHtml(l.kepala_madrasah || '')}" placeholder="Nama dan gelar">
+      </div>
+      <div class="form-group">
+        <label for="lbKetua">Ketua Tahfidz</label>
+        <input type="text" id="lbKetua" value="${escapeHtml(l.ketua_tahfidz || '')}" placeholder="Nama dan gelar">
+      </div>` : `
+      <div class="alert alert-warning" style="display:block">
+        Nama Kepala Madrasah dan Ketua Tahfidz untuk tanda tangan raport belum bisa diisi.
+        Jalankan SQL ini sekali di Supabase → SQL Editor, lalu muat ulang aplikasi:
+        <pre style="white-space:pre-wrap;font-size:12px;margin-top:6px">ALTER TABLE pengaturan ADD COLUMN IF NOT EXISTS kepala_madrasah TEXT, ADD COLUMN IF NOT EXISTS ketua_tahfidz TEXT;</pre>
+      </div>`}
       <div class="form-group">
         <label>Tahun Ajaran</label>
         <input type="text" id="lbTA" value="${escapeHtml(l.tahun_ajaran || '')}" placeholder="2026/2027">
@@ -6570,14 +6587,20 @@ async function saveLembaga() {
   const ta = document.getElementById('lbTA').value.trim();
   const semester = document.getElementById('lbSmt').value;
   if (!nama) return showToast('⚠️ Nama lembaga wajib');
+  const ubah = { nama_lembaga: nama, alamat, tahun_ajaran: ta, semester };
+  // Kolom penandatangan raport hanya ada setelah migrasi; tanpa itu form-nya tidak tampil
+  if (document.getElementById('lbKepala')) {
+    ubah.kepala_madrasah = document.getElementById('lbKepala').value.trim();
+    ubah.ketua_tahfidz = document.getElementById('lbKetua').value.trim();
+  }
 
   showLoading('Menyimpan...');
   try {
     const { error } = await sb.from('pengaturan')
-      .update({ nama_lembaga: nama, alamat, tahun_ajaran: ta, semester })
+      .update(ubah)
       .eq('id', 1);
     if (error) throw error;
-    STATE.lembaga = { ...STATE.lembaga, nama_lembaga: nama, alamat, tahun_ajaran: ta, semester };
+    STATE.lembaga = { ...STATE.lembaga, ...ubah };
     document.getElementById('header-title').textContent = nama;
     document.getElementById('header-sub').textContent = 'Penilaian Tahfidz';
     hideLoading();
