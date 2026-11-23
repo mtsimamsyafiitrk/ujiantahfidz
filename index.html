@@ -1947,28 +1947,82 @@ function gambarRaport(doc, p, logos, l) {
   });
 }
 
-async function exportRaportPDF() {
+// Popup pilihan raport: satu kelas penuh, atau satu santri
+function pilihRaportPDF(mode = 'kelas') {
+  const data = REKAP.data;
+  const kelasSet = [...new Set(data.map(p => p.siswa?.kelas).filter(Boolean))].sort();
+  const tab = (m, icon, label) => `
+    <button class="btn btn-sm ${m === mode ? 'btn-primary' : 'btn-outline'}" style="flex:1" onclick="pilihRaportPDF('${m}')">
+      <span class="material-symbols-outlined" style="font-size:16px">${icon}</span> ${label}
+    </button>`;
+  // Nilai opsi = indeks di REKAP.data (santri) atau nama kelas
+  const opsi = mode === 'kelas'
+    ? kelasSet.map(k => `<option value="${escapeHtml(k)}" ${k === STATE.filter.kelas ? 'selected' : ''}>${escapeHtml(k)} (${data.filter(p => p.siswa?.kelas === k).length} santri)</option>`).join('')
+    : kelasSet.filter(k => STATE.filter.kelas === 'all' || k === STATE.filter.kelas).map(k => `<optgroup label="${escapeHtml(k)}">${
+        data.map((p, i) => [p, i]).filter(([p]) => p.siswa?.kelas === k)
+          .sort(([a], [b]) => (a.siswa?.nama || '').localeCompare(b.siswa?.nama || ''))
+          .map(([p, i]) => `<option value="${i}">${escapeHtml(p.siswa?.nama || '-')}</option>`).join('')
+      }</optgroup>`).join('');
+  showModal(`
+    <div class="modal-header">
+      <h3>Export Raport PDF</h3>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:14px">
+      ${tab('kelas', 'groups', 'Per Kelas')}
+      ${tab('santri', 'person', 'Per Santri')}
+    </div>
+    <div class="form-group">
+      <label for="raportPilih">${mode === 'kelas' ? 'Kelas' : 'Nama santri'}</label>
+      <select id="raportPilih">${opsi}</select>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-outline" style="flex:1" onclick="closeModal()">Batal</button>
+      <button class="btn btn-primary" style="flex:1" onclick="exportRaportPDF('${mode}', document.getElementById('raportPilih').value)">
+        <span class="material-symbols-outlined" style="font-size:15px">picture_as_pdf</span> Export
+      </button>
+    </div>
+  `);
+}
+
+async function exportRaportPDF(mode, nilai) {
   if (typeof window.jspdf === 'undefined') return showToast('❌ Library PDF belum siap, coba lagi sebentar');
-  const kelas = REKAP.kelasRaport;
-  if (!kelas) return showToast('⚠️ Pilih satu kelas dulu');
+  if (mode === 'santri') {
+    const p = REKAP.data[Number(nilai)];
+    if (!p) return showToast('⚠️ Pilih santri dulu');
+    closeModal();
+    return simpanRaportPDF([p], p.siswa?.nama, []);
+  }
+  const kelas = nilai;
+  if (!kelas) return showToast('⚠️ Pilih kelas dulu');
   // Semua nilai kelas ini, tanpa memandang filter penguji/status/pencarian
   const daftar = REKAP.data.filter(p => p.siswa?.kelas === kelas)
     .sort((a, b) => (a.siswa?.nama || '').localeCompare(b.siswa?.nama || ''));
   if (!daftar.length) return showToast('⚠️ Belum ada nilai di kelas ini');
-
+  closeModal();
   showLoading('Membuat raport...');
   try {
     const { data: siswaKelas, error } = await sb.from('siswa').select('id, nama').eq('kelas', kelas).eq('lulus', false);
     if (error) throw error;
     const sudah = new Set(daftar.map(p => p.siswa?.id));
     const belum = (siswaKelas || []).filter(x => !sudah.has(x.id)).map(x => x.nama).sort((a, b) => a.localeCompare(b));
+    await simpanRaportPDF(daftar, kelas, belum);
+  } catch (e) {
+    hideLoading();
+    console.error(e);
+    showToast('❌ Gagal membuat raport: ' + pesanError(e));
+  }
+}
 
+async function simpanRaportPDF(daftar, label, belum) {
+  showLoading('Membuat raport...');
+  try {
     const logos = await Promise.all([muatLogoPNG('logo-ponpes.webp'), muatLogoPNG('logo-mts.webp')]);
     const l = STATE.lembaga || {};
     const doc = new window.jspdf.jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
     daftar.forEach((p, i) => { if (i) doc.addPage(); gambarRaport(doc, p, logos, l); });
     const aman = x => String(x || '').replace(/[\\/:*?"<>|\s]+/g, '-');
-    const nama = `Raport_Tahfidz_${aman(kelas)}_${aman(l.semester)}_${aman(l.tahun_ajaran)}.pdf`;
+    const nama = `Raport_Tahfidz_${aman(label)}_${aman(l.semester)}_${aman(l.tahun_ajaran)}.pdf`;
     doc.save(nama);
     hideLoading();
     showToast(belum.length
@@ -4161,7 +4215,7 @@ async function renderRekap() {
     <div class="page-header v-pagehead">
       <h2>Rekap Nilai</h2>
       <div class="flex-row" style="gap:6px;flex-wrap:wrap">
-        <button class="btn btn-outline btn-sm" id="btnRaportPDF" onclick="exportRaportPDF()" style="display:none">
+        <button class="btn btn-outline btn-sm" id="btnRaportPDF" onclick="pilihRaportPDF()" style="display:none">
           <span class="material-symbols-outlined" style="font-size:17px">picture_as_pdf</span> Export Raport PDF
         </button>
         <button class="btn btn-outline btn-sm" id="btnExportRekap" onclick="exportRekapExcel()" style="display:none">
@@ -4282,12 +4336,9 @@ function renderRekapHasil() {
   });
   window._rekapFiltered = filtered; // dipakai export & detail
   if (btn) btn.style.display = filtered.length ? '' : 'none';
-  // Raport hanya untuk satu kelas penuh pada periode berjalan
+  // Raport hanya pada periode berjalan; kelas/santri dipilih di popup
   const btnRaport = document.getElementById('btnRaportPDF');
-  // Bila periode ini hanya berisi satu kelas, pilihan kelas tidak tampil → pakai kelas itu
-  const semuaKelas = [...new Set(data.map(p => p.siswa?.kelas).filter(Boolean))];
-  REKAP.kelasRaport = STATE.filter.kelas !== 'all' ? STATE.filter.kelas : (semuaKelas.length === 1 ? semuaKelas[0] : null);
-  if (btnRaport) btnRaport.style.display = (canSeeAll && !dariArsip && REKAP.kelasRaport) ? '' : 'none';
+  if (btnRaport) btnRaport.style.display = (canSeeAll && !dariArsip) ? '' : 'none';
 
   const nilaiAkhir = filtered.map(p => Number(p.nilai_akhir) || 0);
   const rata = nilaiAkhir.length ? nilaiAkhir.reduce((a, b) => a + b, 0) / nilaiAkhir.length : 0;
