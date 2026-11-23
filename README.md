@@ -12,6 +12,7 @@ Aplikasi web single-file untuk penilaian ujian Tahfidzul Qur'an siswa MTs Al Ima
 - Isi nilai lewat pencarian surah, dengan tombol salin nilai surah sebelumnya
 - Penugasan santri ke penguji: bagi otomatis, per kelas, satuan, atau import Excel
 - Rekap nilai + Export Excel (ringkasan & detail per surah)
+- Export Raport PDF per kelas (satu halaman A4 per santri, untuk arsip laporan hasil belajar)
 - Import/export data santri dari Excel
 - Bisa di-install ke HP (PWA)
 
