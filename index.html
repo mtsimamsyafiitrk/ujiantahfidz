@@ -1947,6 +1947,21 @@ function gambarRaport(doc, p, logos, l) {
   });
 }
 
+// Opsi santri per kelas, disaring nama (dipanggil ulang saat mengetik di kotak cari)
+function opsiSantriRaport(q) {
+  const data = REKAP.data, needle = q.toLowerCase().trim();
+  const kelasSet = [...new Set(data.map(p => p.siswa?.kelas).filter(Boolean))].sort()
+    .filter(k => STATE.filter.kelas === 'all' || k === STATE.filter.kelas);
+  const html = kelasSet.map(k => {
+    const isi = data.map((p, i) => [p, i])
+      .filter(([p]) => p.siswa?.kelas === k && (p.siswa?.nama || '').toLowerCase().includes(needle))
+      .sort(([a], [b]) => (a.siswa?.nama || '').localeCompare(b.siswa?.nama || ''))
+      .map(([p, i]) => `<option value="${i}">${escapeHtml(p.siswa?.nama || '-')}</option>`).join('');
+    return isi ? `<optgroup label="${escapeHtml(k)}">${isi}</optgroup>` : '';
+  }).join('');
+  return html || '<option value="">Tidak ada nama yang cocok</option>';
+}
+
 // Popup pilihan raport: satu kelas penuh, atau satu santri
 function pilihRaportPDF(mode = 'kelas') {
   const data = REKAP.data;
@@ -1958,11 +1973,7 @@ function pilihRaportPDF(mode = 'kelas') {
   // Nilai opsi = indeks di REKAP.data (santri) atau nama kelas
   const opsi = mode === 'kelas'
     ? kelasSet.map(k => `<option value="${escapeHtml(k)}" ${k === STATE.filter.kelas ? 'selected' : ''}>${escapeHtml(k)} (${data.filter(p => p.siswa?.kelas === k).length} santri)</option>`).join('')
-    : kelasSet.filter(k => STATE.filter.kelas === 'all' || k === STATE.filter.kelas).map(k => `<optgroup label="${escapeHtml(k)}">${
-        data.map((p, i) => [p, i]).filter(([p]) => p.siswa?.kelas === k)
-          .sort(([a], [b]) => (a.siswa?.nama || '').localeCompare(b.siswa?.nama || ''))
-          .map(([p, i]) => `<option value="${i}">${escapeHtml(p.siswa?.nama || '-')}</option>`).join('')
-      }</optgroup>`).join('');
+    : opsiSantriRaport('');
   showModal(`
     <div class="modal-header">
       <h3>Export Raport PDF</h3>
@@ -1972,6 +1983,12 @@ function pilihRaportPDF(mode = 'kelas') {
       ${tab('kelas', 'groups', 'Per Kelas')}
       ${tab('santri', 'person', 'Per Santri')}
     </div>
+    ${mode === 'santri' ? `
+    <label class="v-search" style="margin-bottom:10px">
+      <span class="material-symbols-outlined" aria-hidden="true">search</span>
+      <input type="text" id="raportCari" placeholder="Cari nama santri" aria-label="Cari nama santri"
+             oninput="document.getElementById('raportPilih').innerHTML = opsiSantriRaport(this.value)">
+    </label>` : ''}
     <div class="form-group">
       <label for="raportPilih">${mode === 'kelas' ? 'Kelas' : 'Nama santri'}</label>
       <select id="raportPilih">${opsi}</select>
@@ -1988,7 +2005,7 @@ function pilihRaportPDF(mode = 'kelas') {
 async function exportRaportPDF(mode, nilai) {
   if (typeof window.jspdf === 'undefined') return showToast('❌ Library PDF belum siap, coba lagi sebentar');
   if (mode === 'santri') {
-    const p = REKAP.data[Number(nilai)];
+    const p = nilai === '' ? null : REKAP.data[Number(nilai)];
     if (!p) return showToast('⚠️ Pilih santri dulu');
     closeModal();
     return simpanRaportPDF([p], p.siswa?.nama, []);
