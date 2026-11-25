@@ -1806,7 +1806,7 @@ function susunRaport(p) {
 
 // ── Raport PDF per kelas (A4 tegak, satu halaman per santri) ──
 const KOP_PONPES = "PONDOK PESANTREN AL IMAM ASY-SYAFI'I";
-const KOTA_RAPORT = 'Tarakan';
+const KOTA_RAPORT = 'Kota Tarakan';
 
 // jsPDF tidak membaca webp → ubah lewat canvas ke PNG. Gagal (mis. offline) → tanpa logo.
 async function muatLogoPNG(src) {
@@ -1865,14 +1865,14 @@ function gambarRaport(doc, p, logos, l) {
     : '';
   const idn = [
     ['Nama', s.nama || '-', 'Kelas', s.kelas || '-'],
-    ['NISN', s.nisn || '-', 'Tanggal Ujian', tgl || '-'],
+    ['NISN', s.nisn || '-', 'Pengampu Halaqah', '-'],
     ['Status', getKategoriInfo(s.kategori).label, 'Target Kelas', `${r.target} Juz`]
   ];
   doc.setFontSize(10);
   idn.forEach(([a, b, c, d], i) => {
     const yy = y + i * 5;
     doc.setFont('times', 'normal');
-    doc.text(a, M, yy); doc.text(':', M + 22, yy); doc.text(c, 118, yy); doc.text(':', 143, yy); doc.text(d, 146, yy);
+    doc.text(a, M, yy); doc.text(':', M + 22, yy); doc.text(c, 118, yy); doc.text(':', 149, yy); doc.text(d, 152, yy);
     doc.setFont('times', i === 0 ? 'bold' : 'normal');
     doc.text(doc.splitTextToSize(b, 72)[0], M + 25, yy);
   });
@@ -1925,7 +1925,7 @@ function gambarRaport(doc, p, logos, l) {
   y = Math.max(doc.lastAutoTable.finalY, yRek + bh) + 5;
 
   // Catatan penguji (dipotong agar tidak menabrak tanda tangan)
-  const yTtd = 238;
+  const yTtd = 216;
   const maks = Math.max(1, Math.floor((yTtd - 8 - y - 6) / 4.2));
   let cat = doc.setFontSize(9.5).splitTextToSize(p.catatan?.trim() || '-', W - 2 * M - 4);
   if (cat.length > maks) { cat = cat.slice(0, maks); cat[maks - 1] += ' …'; }
@@ -1934,16 +1934,18 @@ function gambarRaport(doc, p, logos, l) {
   doc.setFont('times', 'bold'); doc.text('Catatan Penguji', M + 2, y + 4.5);
   doc.setFont('times', 'normal'); doc.text(cat, M + 2, y + 9);
 
-  // Tanda tangan: tempat & tanggal di atas kolom kanan, tiga jabatan sejajar
+  // Tanda tangan: Penguji kiri, Ketua Tahfidz kanan (di bawah tempat & tanggal), Kepala Madrasah tengah di bawahnya
   doc.setFontSize(10);
-  const kol = [M + 29, cx, W - M - 29];
-  doc.text(`${KOTA_RAPORT}, ${tgl || '...........................'}`, kol[2], yTtd, { align: 'center' });
-  const ttd = [['Penguji,', p.penguji?.nama], ['Ketua Tahfidz,', l.ketua_tahfidz], ['Kepala Madrasah,', l.kepala_madrasah]];
-  ttd.forEach(([jab, nama], i) => {
-    doc.setFont('times', 'normal'); doc.text(jab, kol[i], yTtd + 5, { align: 'center' });
+  const kiri = M + 29, kanan = W - M - 29;
+  doc.text(`${KOTA_RAPORT}, ${tgl || '...........................'}`, kanan, yTtd, { align: 'center' });
+  const penguji = (p.penguji?.nama || '').trim().toLowerCase().replace(/(^|\s)\S/g, c => c.toUpperCase());
+  const ttd = [['Penguji,', penguji, kiri, 0], ['Ketua Tahfidz,', l.ketua_tahfidz, kanan, 0], ['Kepala Madrasah,', l.kepala_madrasah, cx, 36]];
+  ttd.forEach(([jab, nama, x, dy]) => {
+    const yy = yTtd + dy;
+    doc.setFont('times', 'normal'); doc.text(jab, x, yy + 5, { align: 'center' });
     const nm = nama?.trim() || '(...............................)';
-    doc.setFont('times', 'bold'); doc.text(nm, kol[i], yTtd + 30, { align: 'center' });
-    if (nama?.trim()) { const w = doc.getTextWidth(nm); doc.setLineWidth(0.2); doc.line(kol[i] - w / 2, yTtd + 30.8, kol[i] + w / 2, yTtd + 30.8); }
+    doc.setFont('times', 'bold'); doc.text(nm, x, yy + 28, { align: 'center' });
+    if (nama?.trim()) { const w = doc.getTextWidth(nm); doc.setLineWidth(0.2); doc.line(x - w / 2, yy + 28.8, x + w / 2, yy + 28.8); }
   });
 }
 
