@@ -1844,7 +1844,8 @@ function gambarRaport(doc, p, logos, l) {
   doc.text((l.nama_lembaga || "MTs Al Imam Asy-Syafi'i").toUpperCase(), cx, 22, { align: 'center' });
   doc.setFont('times', 'normal'); doc.setFontSize(8.5);
   let y = 26.5;
-  String(l.alamat || '').split('\n').map(x => x.trim()).filter(Boolean).slice(0, 3).forEach(baris => {
+  const nomor = [l.nsm && `NSM : ${l.nsm}`, l.npsn && `NPSN : ${l.npsn}`].filter(Boolean).join(' | ');
+  String(l.alamat || '').split('\n').map(x => x.trim()).filter(Boolean).slice(0, 3).concat(nomor || []).forEach(baris => {
     doc.text(baris, cx, y, { align: 'center' }); y += 3.8;
   });
   y = Math.max(y, 37);
@@ -2207,7 +2208,9 @@ ALTER TABLE pengaturan
   ADD COLUMN IF NOT EXISTS semester TEXT DEFAULT 'Ganjil',
   ADD COLUMN IF NOT EXISTS kepala_madrasah TEXT,
   ADD COLUMN IF NOT EXISTS ketua_tahfidz TEXT,
-  ADD COLUMN IF NOT EXISTS tanggal_raport DATE;
+  ADD COLUMN IF NOT EXISTS tanggal_raport DATE,
+  ADD COLUMN IF NOT EXISTS nsm TEXT,
+  ADD COLUMN IF NOT EXISTS npsn TEXT;
 
 -- Salinan nilai per periode ujian. Tidak terhubung ke tabel siswa/penilaian,
 -- jadi tetap utuh walau santri naik kelas, lulus, atau dihapus.
@@ -4878,8 +4881,22 @@ async function renderAdminLembagaOnly() {
       <div class="form-group">
         <label>Alamat</label>
         <textarea id="lbAlamat" rows="3">${escapeHtml(l.alamat || '')}</textarea>
-        <p class="text-small text-muted">Setiap baris tampil sebagai satu baris di kop raport (alamat, email, NSM/NPSN).</p>
+        <p class="text-small text-muted">Setiap baris tampil sebagai satu baris di kop raport (alamat, email).</p>
       </div>
+      ${'nsm' in l ? `
+      <div class="form-group">
+        <label for="lbNsm">NSM</label>
+        <input type="text" id="lbNsm" inputmode="numeric" value="${escapeHtml(l.nsm || '')}">
+      </div>
+      <div class="form-group">
+        <label for="lbNpsn">NPSN</label>
+        <input type="text" id="lbNpsn" inputmode="numeric" value="${escapeHtml(l.npsn || '')}">
+        <p class="text-small text-muted">Tampil satu baris di kop raport, tepat di bawah alamat: NSM : … | NPSN : …</p>
+      </div>` : `
+      <div class="alert alert-warning" style="display:block">
+        NSM dan NPSN belum bisa diisi. Jalankan SQL ini sekali di Supabase → SQL Editor, lalu muat ulang aplikasi:
+        <pre style="white-space:pre-wrap;font-size:12px;margin-top:6px">ALTER TABLE pengaturan ADD COLUMN IF NOT EXISTS nsm TEXT, ADD COLUMN IF NOT EXISTS npsn TEXT;</pre>
+      </div>`}
       ${'kepala_madrasah' in l ? `
       <div class="form-group">
         <label for="lbKepala">Kepala Madrasah</label>
@@ -6869,6 +6886,10 @@ async function saveLembaga() {
   if (document.getElementById('lbKepala')) {
     ubah.kepala_madrasah = document.getElementById('lbKepala').value.trim();
     ubah.ketua_tahfidz = document.getElementById('lbKetua').value.trim();
+  }
+  if (document.getElementById('lbNsm')) {
+    ubah.nsm = document.getElementById('lbNsm').value.trim();
+    ubah.npsn = document.getElementById('lbNpsn').value.trim();
   }
   if (document.getElementById('lbTglRaport')) ubah.tanggal_raport = document.getElementById('lbTglRaport').value || null;
 
