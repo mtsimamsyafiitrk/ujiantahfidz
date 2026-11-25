@@ -1863,20 +1863,23 @@ function gambarRaport(doc, p, logos, l) {
   const tgl = p.tanggal_ujian
     ? new Date(p.tanggal_ujian + 'T00:00:00').toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })
     : '';
+  const penguji = (p.penguji?.nama || '').trim().toLowerCase().replace(/(^|\s)\S/g, c => c.toUpperCase());
   const idn = [
     ['Nama', s.nama || '-', 'Kelas', s.kelas || '-'],
     ['NISN', s.nisn || '-', 'Pengampu Halaqah', '-'],
-    ['Status', getKategoriInfo(s.kategori).label, 'Target Kelas', `${r.target} Juz`]
+    ['Status', getKategoriInfo(s.kategori).label, 'Penguji Ujian', penguji || '-'],
+    ['', '', 'Target Kelas', `${r.target} Juz`]
   ];
   doc.setFontSize(10);
   idn.forEach(([a, b, c, d], i) => {
     const yy = y + i * 5;
     doc.setFont('times', 'normal');
-    doc.text(a, M, yy); doc.text(':', M + 22, yy); doc.text(c, 118, yy); doc.text(':', 149, yy); doc.text(d, 152, yy);
+    if (a) { doc.text(a, M, yy); doc.text(':', M + 22, yy); }
+    doc.text(c, 118, yy); doc.text(':', 149, yy); doc.text(doc.splitTextToSize(d, W - M - 152)[0], 152, yy);
     doc.setFont('times', i === 0 ? 'bold' : 'normal');
-    doc.text(doc.splitTextToSize(b, 72)[0], M + 25, yy);
+    if (b) doc.text(doc.splitTextToSize(b, 72)[0], M + 25, yy);
   });
-  y += 3 * 5 + 1;
+  y += idn.length * 5 + 1;
 
   // Tabel nilai
   if (r.iqra) {
